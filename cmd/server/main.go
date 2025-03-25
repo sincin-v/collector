@@ -33,8 +33,8 @@ func (g *GaugeMetric) GetValueString() string {
 	return fmt.Sprintf("%f", g.Value)
 }
 
-func (g GaugeMetric) GetType() string {
-	return g.Type
+func (m GaugeMetric) GetType() string {
+	return m.Type
 }
 
 type CounterMetric struct {
@@ -57,8 +57,8 @@ func (g *CounterMetric) GetValueString() string {
 	return fmt.Sprintf("%d", g.Value)
 }
 
-func (c CounterMetric) GetType() string {
-	return c.Type
+func (m CounterMetric) GetType() string {
+	return m.Type
 }
 
 func SetMetricValue(m Metric, v string, t string) error {
