@@ -33,7 +33,7 @@ func (g *GaugeMetric) GetValueString() string {
 	return fmt.Sprintf("%f", g.Value)
 }
 
-func (g *GaugeMetric) GetType() string {
+func (g GaugeMetric) GetType() string {
 	return g.Type
 }
 
@@ -57,7 +57,7 @@ func (g *CounterMetric) GetValueString() string {
 	return fmt.Sprintf("%d", g.Value)
 }
 
-func (c *CounterMetric) GetType() string {
+func (c CounterMetric) GetType() string {
 	return c.Type
 }
 
@@ -99,17 +99,22 @@ func updateMetricHandler(res http.ResponseWriter, req *http.Request) {
 			} else if metricType == `counter` {
 				metric = &CounterMetric{Name: metricName}
 			} else {
+				log.Printf("Invalid type of new metric (%s)", metricType)
 				res.WriteHeader(http.StatusBadRequest)
 				return
 			}
 		} else {
 			if metric.GetType() != metricType {
+				log.Printf("Invalid type of exist metric (%s)", metricType)
 				res.WriteHeader(http.StatusBadRequest)
+				return
 			}
 		}
 		err := SetMetricValue(metric, metricValue, metricType)
 		if err != nil {
+			log.Printf("Invalid value (%s) for type (%s)", metricValue, metricType)
 			res.WriteHeader(http.StatusBadRequest)
+			return
 		}
 
 		metricStorage.CreateMetric(metricName, metric)
