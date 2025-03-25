@@ -19,18 +19,18 @@ type GaugeMetric struct {
 	Value float64
 }
 
-func (g *GaugeMetric) Set(v string, t string) error {
+func (m *GaugeMetric) Set(v string, t string) error {
 	nv, err := strconv.ParseFloat(v, 64)
 	if err != nil {
 		return err
 	}
-	g.Value = nv
-	g.Type = t
+	m.Value = nv
+	m.Type = t
 	return nil
 }
 
-func (g *GaugeMetric) GetValueString() string {
-	return fmt.Sprintf("%f", g.Value)
+func (m *GaugeMetric) GetValueString() string {
+	return fmt.Sprintf("%f", m.Value)
 }
 
 func (m GaugeMetric) GetType() string {
@@ -43,18 +43,18 @@ type CounterMetric struct {
 	Value int64
 }
 
-func (c *CounterMetric) Set(v string, t string) error {
+func (m *CounterMetric) Set(v string, t string) error {
 	nv, err := strconv.ParseInt(v, 10, 64)
 	if err != nil {
 		return err
 	}
-	c.Value += nv
-	c.Type = t
+	m.Value += nv
+	m.Type = t
 	return nil
 }
 
-func (g *CounterMetric) GetValueString() string {
-	return fmt.Sprintf("%d", g.Value)
+func (m *CounterMetric) GetValueString() string {
+	return fmt.Sprintf("%d", m.Value)
 }
 
 func (m CounterMetric) GetType() string {
