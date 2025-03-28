@@ -50,16 +50,16 @@ func GetMetrics(ch chan<- storage.MetricStorage) {
 
 	var metrics runtime.MemStats
 	runtime.ReadMemStats(&metrics)
-	metrics_values := reflect.ValueOf(metrics)
+	metricsValues := reflect.ValueOf(metrics)
 
 	for _, metricName := range collectMetricsNames {
-		mv := reflect.Indirect(metrics_values).FieldByName(metricName)
+		mv := reflect.Indirect(metricsValues).FieldByName(metricName)
 		var metric = metricsStorage.GetMetrics(metricName)
 		if metric == nil {
 			metric = &storage.GaugeMetric{Name: metricName}
 		}
 		storage.SetMetricValue(metric, fmt.Sprintf("%v", mv), `gauge`)
-		metricsStorage.CreateMetric(fmt.Sprintf("%s", metricName), metric)
+		metricsStorage.CreateMetric(metricName, metric)
 	}
 	pollCountMetric := metricsStorage.GetMetrics("PollCount")
 	if pollCountMetric == nil {
@@ -76,5 +76,4 @@ func GetMetrics(ch chan<- storage.MetricStorage) {
 	metricsStorage.CreateMetric("randomValue", randomValueMetric)
 	log.Printf("Finish collect metrics")
 	ch <- metricsStorage
-	return
 }
