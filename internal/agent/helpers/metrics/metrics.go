@@ -74,6 +74,7 @@ func GetMetrics(ch chan<- storage.MetricStorage) {
 	}
 	storage.SetMetricValue(randomValueMetric, fmt.Sprintf("%f", rand.Float64()), `gauge`)
 	metricsStorage.CreateMetric("randomValue", randomValueMetric)
-
+	log.Printf("Finish collect metrics")
 	ch <- metricsStorage
+	return
 }

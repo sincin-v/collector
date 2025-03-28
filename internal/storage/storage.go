@@ -28,7 +28,7 @@ func (m *GaugeMetric) Set(v string, t string) error {
 }
 
 func (m *GaugeMetric) GetValueString() string {
-	return fmt.Sprintf("%f", m.Value)
+	return fmt.Sprintf("%v", m.Value)
 }
 
 func (m GaugeMetric) GetType() string {

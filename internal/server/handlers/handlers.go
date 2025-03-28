@@ -46,5 +46,6 @@ func UpdateMetricHandler(res http.ResponseWriter, req *http.Request) {
 		res.WriteHeader(http.StatusOK)
 	} else {
 		log.Printf("Error: %d", http.StatusMethodNotAllowed)
+		res.WriteHeader(http.StatusMethodNotAllowed)
 	}
 }

@@ -11,23 +11,28 @@ import (
 
 var reportInterval int64 = 10
 
-func SendMetric(channel chan storage.MetricStorage) {
+func SendMetricHelper(channel chan storage.MetricStorage, baseUrl string) {
+	metricsStorage := <-channel
+	log.Printf("Send metric")
+	for metricName := range metricsStorage.Metrics {
+		metric := metricsStorage.Metrics[metricName]
+		metricValue := metric.GetValueString()
+		metricType := metric.GetType()
+		url := fmt.Sprintf("%s/update/%s/%s/%s", baseUrl, metricType, metricName, metricValue)
+		log.Printf("Send request to url: %s", url)
+		_, err := http.Post(url, "text/plain", nil)
+		if err != nil {
+			log.Fatalf("Error to send request %s", url)
+			continue
+		}
+		log.Printf("Finish send request")
+	}
+	return
+}
+
+func SendMetric(channel chan storage.MetricStorage, baseUrl string) {
 	for {
 		time.Sleep(time.Duration(reportInterval) * time.Second)
-		metricsStorage := <-channel
-		log.Printf("Send metric")
-		for metricName := range metricsStorage.Metrics {
-			metric := metricsStorage.Metrics[metricName]
-			metricValue := metric.GetValueString()
-			metricType := metric.GetType()
-			url := fmt.Sprintf("http://localhost:8080/update/%s/%s/%s", metricType, metricName, metricValue)
-			log.Printf("Send request to url: %s", url)
-			_, err := http.Post(url, "text/plain", nil)
-			if err != nil {
-				log.Fatalf("Error to send request %s", url)
-				continue
-			}
-		}
+		SendMetricHelper(channel, baseUrl)
 	}
-
 }

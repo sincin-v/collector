@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/sincin-v/collector/internal/server/handlers"
-
 )
 
 func main() {
