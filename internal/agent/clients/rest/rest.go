@@ -9,8 +9,6 @@ import (
 	"github.com/sincin-v/collector/internal/storage"
 )
 
-var reportInterval int64 = 10
-
 func SendMetricHelper(channel chan storage.MetricStorage, baseURL string) {
 	metricsStorage := <-channel
 	log.Printf("Send metric")
@@ -30,7 +28,7 @@ func SendMetricHelper(channel chan storage.MetricStorage, baseURL string) {
 	}
 }
 
-func SendMetric(channel chan storage.MetricStorage, baseURL string) {
+func SendMetric(channel chan storage.MetricStorage, baseURL string, reportInterval int) {
 	for {
 		time.Sleep(time.Duration(reportInterval) * time.Second)
 		SendMetricHelper(channel, baseURL)
