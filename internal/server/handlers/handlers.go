@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"fmt"
+	"io"
 	"log"
 	"net/http"
 
@@ -48,4 +50,26 @@ func UpdateMetricHandler(res http.ResponseWriter, req *http.Request) {
 		log.Printf("Error: %d", http.StatusMethodNotAllowed)
 		res.WriteHeader(http.StatusMethodNotAllowed)
 	}
+}
+
+func GetMetricHandler(res http.ResponseWriter, req *http.Request) {
+	metricName := req.PathValue("metricName")
+	var metric = metricStorage.GetMetrics(metricName)
+	if metric == nil {
+		log.Printf("Error. Metric %s not found", metricName)
+		res.WriteHeader(http.StatusNotFound)
+		return
+	}
+	res.WriteHeader(http.StatusOK)
+	io.WriteString(res, metric.GetValueString())
+}
+
+func GetAllMetricsHandler(res http.ResponseWriter, req *http.Request) {
+	for mn := range metricStorage.Metrics {
+		metric := metricStorage.GetMetrics(mn)
+		io.WriteString(res, fmt.Sprintf("%s = %s\n", mn, metric.GetValueString()))
+	}
+
+	res.WriteHeader(http.StatusOK)
+
 }
