@@ -5,16 +5,22 @@ import (
 	"github.com/go-chi/chi/v5"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/sincin-v/collector/internal/server/handlers"
 )
 
 func main() {
 
-	hostStr := flag.String("a", "localhost:8080", "Listen host and port")
+	var hostStr = flag.String("a", "localhost:8080", "Listen host and port")
 
 	flag.Parse()
-	log.Printf("Start server work")
+
+	if envHostStr := os.Getenv("ADDRESS"); envHostStr != "" {
+		hostStr = &envHostStr
+	}
+
+	log.Printf("Start server work on %s", *hostStr)
 
 	router := chi.NewRouter()
 

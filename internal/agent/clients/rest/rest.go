@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"time"
 	"strings"
+	"time"
 
 	"github.com/sincin-v/collector/internal/storage"
 )
@@ -32,9 +32,9 @@ func SendMetricHelper(channel chan storage.MetricStorage, baseURL string) {
 	}
 }
 
-func SendMetric(channel chan storage.MetricStorage, baseURL string, reportInterval int) {
+func SendMetric(channel chan storage.MetricStorage, baseURL string, reportInterval time.Duration) {
 	for {
-		time.Sleep(time.Duration(reportInterval) * time.Second)
+		time.Sleep(reportInterval)
 		SendMetricHelper(channel, baseURL)
 	}
 }

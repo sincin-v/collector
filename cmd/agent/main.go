@@ -5,7 +5,9 @@ import (
 	"log"
 	"time"
 
+	"github.com/caarlos0/env/v6"
 	"github.com/sincin-v/collector/internal/agent/clients/rest"
+	"github.com/sincin-v/collector/internal/agent/config"
 	"github.com/sincin-v/collector/internal/agent/helpers/metrics"
 	"github.com/sincin-v/collector/internal/storage"
 )
@@ -13,17 +15,44 @@ import (
 func main() {
 	log.Printf("Start agent work")
 
-	serverHost := flag.String("a", "localhost:8080", "Metric server host and port")
-	reportInterval := flag.Int("r", 10, "Report interval")
-	pollInterval := flag.Int("p", 2, "Poll interval")
+	var argServerHost = flag.String("a", "localhost:8080", "Metric server host and port")
+	var argReportInterval = flag.Int("r", 10, "Report interval")
+	var argPollInterval = flag.Int("p", 2, "Poll interval")
 
 	flag.Parse()
 
-	log.Printf("Send metrics to %s", *serverHost)
+	var cfg config.Config
+	err := env.Parse(&cfg)
+	if err != nil {
+		log.Printf("Env is empty")
+	}
+
+	var serverHost string
+	if cfg.Address != "" {
+		serverHost = cfg.Address
+	} else {
+		serverHost = *argServerHost
+	}
+	var reportInterval time.Duration
+	if cfg.ReportInterval != 0 {
+		reportInterval = cfg.ReportInterval
+	} else {
+		reportInterval = time.Duration(time.Duration(*argReportInterval) * time.Second)
+	}
+
+	var pollInterval time.Duration
+	if cfg.PollInterval != 0 {
+		pollInterval = cfg.PollInterval
+	} else {
+		pollInterval = time.Duration(time.Duration(*argPollInterval) * time.Second)
+
+	}
+
+	log.Printf("Send metrics to %s", serverHost)
 	var metricCh = make(chan storage.MetricStorage)
-	go rest.SendMetric(metricCh, *serverHost, *reportInterval)
+	go rest.SendMetric(metricCh, serverHost, reportInterval)
 	for {
 		go metrics.GetMetrics(metricCh)
-		time.Sleep(time.Duration(*pollInterval) * time.Second)
+		time.Sleep(pollInterval)
 	}
 }
