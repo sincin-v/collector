@@ -13,7 +13,7 @@ import (
 func main() {
 	log.Printf("Start agent work")
 
-	serverHost := flag.String("a", "http://localhost:8080", "Metric server host and port")
+	serverHost := flag.String("a", "localhost:8080", "Metric server host and port")
 	reportInterval := flag.Int("r", 10, "Report interval")
 	pollInterval := flag.Int("p", 2, "Poll interval")
 

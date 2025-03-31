@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"time"
+	"strings"
 
 	"github.com/sincin-v/collector/internal/storage"
 )
@@ -16,7 +17,10 @@ func SendMetricHelper(channel chan storage.MetricStorage, baseURL string) {
 		metric := metricsStorage.Metrics[metricName]
 		metricValue := metric.GetValueString()
 		metricType := metric.GetType()
-		url := fmt.Sprintf("%s/update/%s/%s/%s", baseURL, metricType, metricName, metricValue)
+		var url = fmt.Sprintf("%s/update/%s/%s/%s", baseURL, metricType, metricName, metricValue)
+		if !strings.HasPrefix(url, "http") {
+			url = fmt.Sprintf("http://%s", url)
+		}
 		log.Printf("Send request to url: %s", url)
 		resp, err := http.Post(url, "text/plain", nil)
 		if err != nil {
