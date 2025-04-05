@@ -1,82 +1,67 @@
 package storage
 
 import (
+	"errors"
 	"fmt"
-	"strconv"
+	"sync"
 )
 
-type Metric interface {
-	Set(v string, t string) error
-	GetValueString() string
-	GetType() string
-}
-
-type GaugeMetric struct {
-	Name  string
-	Type  string
-	Value float64
-}
-
-func (m *GaugeMetric) Set(v string, t string) error {
-	nv, err := strconv.ParseFloat(v, 64)
-	if err != nil {
-		return err
-	}
-	m.Value = nv
-	m.Type = t
-	return nil
-}
-
-func (m *GaugeMetric) GetValueString() string {
-	return fmt.Sprintf("%v", m.Value)
-}
-
-func (m GaugeMetric) GetType() string {
-	return m.Type
-}
-
-type CounterMetric struct {
-	Name  string
-	Type  string
-	Value int64
-}
-
-func (m *CounterMetric) Set(v string, t string) error {
-	nv, err := strconv.ParseInt(v, 10, 64)
-	if err != nil {
-		return err
-	}
-	m.Value += nv
-	m.Type = t
-	return nil
-}
-
-func (m *CounterMetric) GetValueString() string {
-	return fmt.Sprintf("%d", m.Value)
-}
-
-func (m CounterMetric) GetType() string {
-	return m.Type
-}
-
-func SetMetricValue(m Metric, v string, t string) error {
-	err := m.Set(v, t)
-	return err
-}
-
 type MetricStorage struct {
-	Metrics map[string]Metric
+	mu      sync.RWMutex
+	gauge   map[string]float64
+	counter map[string]int64
 }
 
-func (ms MetricStorage) CreateMetric(n string, m Metric) Metric {
-	ms.Metrics[n] = m
-	return m
-}
-
-func (ms MetricStorage) GetMetrics(n string) Metric {
-	m, ok := ms.Metrics[n]
-	if !ok {
-		return nil
+func New() MetricStorage {
+	return MetricStorage{
+		gauge:   map[string]float64{},
+		counter: map[string]int64{},
 	}
-	return m
+}
+
+func (ms *MetricStorage) CreateGaugeMetric(name string, value float64) {
+	ms.mu.Lock()
+	ms.gauge[name] = value
+	ms.mu.Unlock()
+	return
+}
+
+func (ms *MetricStorage) CreateCounterMetric(name string, value int64) {
+	ms.mu.Lock()
+	defer ms.mu.Unlock()
+	_, ok := ms.counter[name]
+	if !ok {
+		ms.counter[name] = value
+		return
+	}
+	ms.counter[name] += value
+
+}
+
+func (ms *MetricStorage) GetMetric(metricType string, metricName string) (string, error) {
+	ms.mu.Lock()
+	defer ms.mu.Unlock()
+	switch metricType {
+	case "gauge":
+		value, ok := ms.gauge[metricName]
+		if !ok {
+			return "", errors.New(fmt.Sprintf("There is no gauge metric %s", metricName))
+		}
+		return fmt.Sprintf("%f", value), nil
+	case "counter":
+		value, ok := ms.counter[metricName]
+		if !ok {
+			return "", errors.New(fmt.Sprintf("There is no counter metric %s", metricName))
+		}
+		return fmt.Sprintf("%d", value), nil
+	default:
+		return "", errors.New(fmt.Sprintf("There is no metric type %s", metricType))
+	}
+}
+
+func (ms *MetricStorage) GetAllCountersMetrics() map[string]int64 {
+	return ms.counter
+}
+func (ms *MetricStorage) GetAllGaugeMetrics() map[string]float64 {
+	return ms.gauge
 }

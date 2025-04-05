@@ -1,34 +1,25 @@
 package main
 
 import (
-	"flag"
-	"github.com/go-chi/chi/v5"
 	"log"
 	"net/http"
-	"os"
 
-	"github.com/sincin-v/collector/internal/server/handlers"
+	"github.com/sincin-v/collector/internal/server/config"
+	"github.com/sincin-v/collector/internal/server/router"
+	"github.com/sincin-v/collector/internal/storage"
 )
 
 func main() {
 
-	var hostStr = flag.String("a", "localhost:8080", "Listen host and port")
+	serverConfig := config.GetServerConfig()
 
-	flag.Parse()
+	log.Printf("Start server work on %s", serverConfig.Host)
 
-	if envHostStr := os.Getenv("ADDRESS"); envHostStr != "" {
-		hostStr = &envHostStr
-	}
+	metricStorage := storage.New()
 
-	log.Printf("Start server work on %s", *hostStr)
+	serverRouter := router.CreateRouter(&metricStorage)
 
-	router := chi.NewRouter()
-
-	router.Post("/update/{metricType}/{metricName}/{metricValue}", handlers.UpdateMetricHandler)
-	router.Get("/value/{metricType}/{metricName}", handlers.GetMetricHandler)
-	router.Get("/", handlers.GetAllMetricsHandler)
-
-	err := http.ListenAndServe(*hostStr, router)
+	err := http.ListenAndServe(serverConfig.Host, serverRouter)
 	if err != nil {
 		panic(err)
 	}
