@@ -24,7 +24,7 @@ func TestMetricStorage_CreateGaugeMetric(t *testing.T) {
 			name:   "positive test set gauge metric",
 			fields: fields{gauge: make(map[string]float64)},
 			args:   args{"testMetric", 0.001},
-			want:   "0.001000",
+			want:   "0.001",
 		},
 	}
 	for _, tt := range tests {
@@ -109,7 +109,7 @@ func TestMetricStorage_GetMetric(t *testing.T) {
 			name:   "positive test get gauge metric",
 			fields: fields{gauge: map[string]float64{"testMetric": 0.1}},
 			args:   args{"gauge", "testMetric"},
-			want:   "0.100000",
+			want:   "0.1",
 		},
 		{
 			name:    "positive test get not exist gauge metric",

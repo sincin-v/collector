@@ -3,6 +3,7 @@ package storage
 import (
 	"fmt"
 	"sync"
+	"strconv"
 )
 
 type MetricStorage struct {
@@ -45,7 +46,7 @@ func (ms *MetricStorage) GetMetric(metricType string, metricName string) (string
 		if !ok {
 			return "", fmt.Errorf("there is no gauge metric %s", metricName)
 		}
-		return fmt.Sprintf("%f", value), nil
+		return strconv.FormatFloat(value, 'f', -1, 64), nil 
 	case "counter":
 		value, ok := ms.counter[metricName]
 		if !ok {
