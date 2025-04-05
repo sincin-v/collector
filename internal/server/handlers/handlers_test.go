@@ -258,7 +258,7 @@ func TestHandler_GetAllMetricsHandler(t *testing.T) {
 				service: service,
 			}
 
-			url := fmt.Sprintf("/")
+			url := "/"
 			request := httptest.NewRequest(tt.args.httpMethod, url, nil)
 			w := httptest.NewRecorder()
 			h.GetAllMetricsHandler(w, request)

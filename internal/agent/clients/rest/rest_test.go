@@ -44,8 +44,8 @@ func TestHttpClient_SendPostRequest(t *testing.T) {
 				}
 				w.WriteHeader(tt.args.statusCode)
 			}))
-
-			h := HttpClient{
+			defer ts.Close()
+			h := HTTPClient{
 				baseURL: ts.URL,
 			}
 			got, err := h.SendPostRequest(tt.args.url)
@@ -56,6 +56,7 @@ func TestHttpClient_SendPostRequest(t *testing.T) {
 			if got.StatusCode != tt.want {
 				t.Errorf("HttpClient.SendPostRequest() = %v, want %v", got, tt.want)
 			}
+			defer got.Body.Close()
 		})
 	}
 }

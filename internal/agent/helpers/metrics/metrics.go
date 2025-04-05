@@ -48,16 +48,16 @@ type MetricsService interface {
 	GetAllMetrics() (map[string]int64, map[string]float64)
 }
 
-type HttpClient interface {
+type HTTPClient interface {
 	SendPostRequest(string) (*http.Response, error)
 }
 
 type Collector struct {
 	service    MetricsService
-	httpClient HttpClient
+	httpClient HTTPClient
 }
 
-func New(s MetricsService, hc HttpClient) Collector {
+func New(s MetricsService, hc HTTPClient) Collector {
 	return Collector{service: s, httpClient: hc}
 }
 
@@ -100,21 +100,25 @@ func (c Collector) SendMetrics() {
 		metricValue := gaugeMetrics[metricName]
 
 		methodURL := fmt.Sprintf("/update/gauge/%s/%f", metricName, metricValue)
-		_, err := c.httpClient.SendPostRequest(methodURL)
+		res, err := c.httpClient.SendPostRequest(methodURL)
 		if err != nil {
 			log.Fatalf("Cannot send request to server to set metric %s", metricName)
 			continue
 		}
+		defer res.Body.Close()
+
 	}
 	for metricName := range counterMetrics {
 		metricValue := counterMetrics[metricName]
 
 		methodURL := fmt.Sprintf("/update/counter/%s/%d", metricName, metricValue)
-		_, err := c.httpClient.SendPostRequest(methodURL)
+		res, err := c.httpClient.SendPostRequest(methodURL)
 		if err != nil {
 			log.Fatalf("Cannot send request to server to set metric %s", metricName)
 			continue
 		}
+		defer res.Body.Close()
+
 	}
 	log.Printf("Finish send metrics")
 

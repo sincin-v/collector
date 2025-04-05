@@ -7,15 +7,15 @@ import (
 	"strings"
 )
 
-type HttpClient struct {
+type HTTPClient struct {
 	baseURL string
 }
 
-func New(baseURL string) HttpClient {
-	return HttpClient{baseURL: baseURL}
+func New(baseURL string) HTTPClient {
+	return HTTPClient{baseURL: baseURL}
 }
 
-func (h HttpClient) SendPostRequest(url string) (*http.Response, error) {
+func (h HTTPClient) SendPostRequest(url string) (*http.Response, error) {
 	url = h.baseURL + url
 	if !strings.HasPrefix(url, "http") {
 		url = fmt.Sprintf("http://%s", url)

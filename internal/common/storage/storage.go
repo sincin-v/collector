@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"errors"
 	"fmt"
 	"sync"
 )
@@ -23,7 +22,6 @@ func (ms *MetricStorage) CreateGaugeMetric(name string, value float64) {
 	ms.mu.Lock()
 	ms.gauge[name] = value
 	ms.mu.Unlock()
-	return
 }
 
 func (ms *MetricStorage) CreateCounterMetric(name string, value int64) {
@@ -45,17 +43,17 @@ func (ms *MetricStorage) GetMetric(metricType string, metricName string) (string
 	case "gauge":
 		value, ok := ms.gauge[metricName]
 		if !ok {
-			return "", errors.New(fmt.Sprintf("There is no gauge metric %s", metricName))
+			return "", fmt.Errorf("there is no gauge metric %s", metricName)
 		}
 		return fmt.Sprintf("%f", value), nil
 	case "counter":
 		value, ok := ms.counter[metricName]
 		if !ok {
-			return "", errors.New(fmt.Sprintf("There is no counter metric %s", metricName))
+			return "", fmt.Errorf("there is no counter metric %s", metricName)
 		}
 		return fmt.Sprintf("%d", value), nil
 	default:
-		return "", errors.New(fmt.Sprintf("There is no metric type %s", metricType))
+		return "", fmt.Errorf("there is no metric type %s", metricType)
 	}
 }
 

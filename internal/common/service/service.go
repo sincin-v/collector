@@ -1,7 +1,6 @@
 package service
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"strconv"
@@ -43,7 +42,7 @@ func (s MetricsService) CreateMetric(metricType string, metricName string, metri
 		s.metricStorage.CreateCounterMetric(metricName, value)
 	default:
 		log.Printf("Invalid type of new metric (%s)", metricType)
-		return "", errors.New(fmt.Sprintf("Invalid type of new metric (%s)", metricType))
+		return "", fmt.Errorf("invalid type of new metric (%s)", metricType)
 	}
 	newSetValue, _ := s.metricStorage.GetMetric(metricType, metricName)
 	return newSetValue, nil
