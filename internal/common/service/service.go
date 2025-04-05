@@ -59,3 +59,7 @@ func (s MetricsService) GetAllMetrics() (map[string]int64, map[string]float64) {
 	gaugeMetrics := s.metricStorage.GetAllGaugeMetrics()
 	return counterMetric, gaugeMetrics
 }
+
+func (s MetricsService) GetStorage() MetricStorage {
+	return s.metricStorage
+}

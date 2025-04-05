@@ -9,7 +9,8 @@ import (
 	"github.com/sincin-v/collector/internal/agent/clients/rest"
 	"github.com/sincin-v/collector/internal/agent/config"
 	"github.com/sincin-v/collector/internal/agent/helpers/metrics"
-	"github.com/sincin-v/collector/internal/storage"
+	"github.com/sincin-v/collector/internal/common/service"
+	"github.com/sincin-v/collector/internal/common/storage"
 )
 
 func main() {
@@ -49,10 +50,15 @@ func main() {
 	}
 
 	log.Printf("Send metrics to %s", serverHost)
-	var metricCh = make(chan storage.MetricStorage)
-	go rest.SendMetric(metricCh, serverHost, reportInterval)
+	metricStorage := storage.New()
+	service := service.New(&metricStorage)
+	hc := rest.New(serverHost)
+	metricsCollector := metrics.New(&service, hc)
+	go metricsCollector.StartSendMetrics(reportInterval)
 	for {
-		go metrics.GetMetrics(metricCh)
+		// go metricsCollector.StartCollectMetrics(pollInterval)
+		go metricsCollector.CollectMetrics()
+
 		time.Sleep(pollInterval)
 	}
 }

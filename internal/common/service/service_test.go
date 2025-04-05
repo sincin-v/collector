@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/sincin-v/collector/internal/storage"
+	"github.com/sincin-v/collector/internal/common/storage"
 )
 
 func TestMetricsService_CreateMetric(t *testing.T) {

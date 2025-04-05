@@ -3,33 +3,59 @@ package rest
 import (
 	"net/http"
 	"net/http/httptest"
-	"testing"
+	"strings"
 
-	"github.com/sincin-v/collector/internal/storage"
+	"testing"
 )
 
-func TestSendMetricHelper(t *testing.T) {
+func TestHttpClient_SendPostRequest(t *testing.T) {
+	type fields struct {
+		baseURL string
+	}
 	type args struct {
-		channel chan storage.MetricStorage
+		url        string
+		statusCode int
 	}
 	tests := []struct {
-		name string
-		args args
+		name    string
+		fields  fields
+		args    args
+		want    int
+		wantErr bool
 	}{
 		{
-			name: "positive test",
-			args: args{make(chan storage.MetricStorage)},
+			name: "positive test send request",
+			args: args{"/update/counter/TestMetric/1", http.StatusOK},
+			want: http.StatusOK,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				partsPath := strings.Split(r.URL.Path, "/")
+				if partsPath[1] != "update" {
+					t.Errorf("Error: There is no 'update' on url path")
+				}
+				inputMetricType := partsPath[2]
+				inputMetricName := partsPath[3]
+				inputMetricValue := partsPath[4]
+				if inputMetricType == "" || inputMetricName == "" || inputMetricValue == "" {
+					t.Errorf("ERROR: The url path invalid %s", r.URL.Path)
+				}
+				w.WriteHeader(tt.args.statusCode)
 			}))
 
-			go SendMetricHelper(tt.args.channel, ts.URL)
-
-			tt.args.channel <- storage.MetricStorage{Metrics: map[string]storage.Metric{"TestMetric": &storage.CounterMetric{Name: "TestMetric", Type: "counter", Value: 1}}}
+			h := HttpClient{
+				baseURL: ts.URL,
+			}
+			got, err := h.SendPostRequest(tt.args.url)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("HttpClient.SendPostRequest() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got.StatusCode != tt.want {
+				t.Errorf("HttpClient.SendPostRequest() = %v, want %v", got, tt.want)
+			}
 		})
 	}
 }

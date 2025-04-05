@@ -2,9 +2,9 @@ package router
 
 import (
 	"github.com/go-chi/chi/v5"
+	"github.com/sincin-v/collector/internal/common/service"
+	"github.com/sincin-v/collector/internal/common/storage"
 	"github.com/sincin-v/collector/internal/server/handlers"
-	"github.com/sincin-v/collector/internal/server/service"
-	"github.com/sincin-v/collector/internal/storage"
 )
 
 func CreateRouter(storage *storage.MetricStorage) *chi.Mux {

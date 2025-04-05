@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"net/http"
 	"reflect"
 	"runtime"
-
-	"github.com/sincin-v/collector/internal/storage"
+	"time"
 )
 
 var PollCountValue int = 0
@@ -42,9 +42,40 @@ var collectMetricsNames = [...]string{
 	"GCCPUFraction",
 }
 
-var metricsStorage = storage.MetricStorage{Metrics: make(map[string]storage.Metric)}
+type MetricsService interface {
+	CreateMetric(string, string, string) (string, error)
+	GetMetric(string, string) (string, error)
+	GetAllMetrics() (map[string]int64, map[string]float64)
+}
 
-func GetMetrics(ch chan<- storage.MetricStorage) {
+type HttpClient interface {
+	SendPostRequest(string) (*http.Response, error)
+}
+
+type Collector struct {
+	service    MetricsService
+	httpClient HttpClient
+}
+
+func New(s MetricsService, hc HttpClient) Collector {
+	return Collector{service: s, httpClient: hc}
+}
+
+func (c Collector) StartCollectMetrics(pollInterval time.Duration) {
+	for {
+		c.CollectMetrics()
+		time.Sleep(pollInterval)
+	}
+}
+
+func (c Collector) StartSendMetrics(reportInterval time.Duration) {
+	for {
+		time.Sleep(reportInterval)
+		c.SendMetrics()
+	}
+}
+
+func (c Collector) CollectMetrics() {
 
 	log.Printf("Start collect metrics")
 
@@ -54,26 +85,37 @@ func GetMetrics(ch chan<- storage.MetricStorage) {
 
 	for _, metricName := range collectMetricsNames {
 		mv := reflect.Indirect(metricsValues).FieldByName(metricName)
-		var metric = metricsStorage.GetMetrics(metricName)
-		if metric == nil {
-			metric = &storage.GaugeMetric{Name: metricName}
-		}
-		storage.SetMetricValue(metric, fmt.Sprintf("%v", mv), `gauge`)
-		metricsStorage.CreateMetric(metricName, metric)
+		c.service.CreateMetric("gauge", metricName, fmt.Sprintf("%v", mv))
 	}
-	pollCountMetric := metricsStorage.GetMetrics("PollCount")
-	if pollCountMetric == nil {
-		pollCountMetric = &storage.CounterMetric{Name: "PollCount"}
-	}
-	storage.SetMetricValue(pollCountMetric, `1`, `counter`)
-	metricsStorage.CreateMetric("PollCount", pollCountMetric)
+	c.service.CreateMetric("counter", "PollCount", "1")
+	c.service.CreateMetric("gauge", "randomValue", fmt.Sprintf("%f", rand.Float64()))
 
-	randomValueMetric := metricsStorage.GetMetrics("randomValue")
-	if randomValueMetric == nil {
-		randomValueMetric = &storage.GaugeMetric{Name: "randomValue"}
-	}
-	storage.SetMetricValue(randomValueMetric, fmt.Sprintf("%f", rand.Float64()), `gauge`)
-	metricsStorage.CreateMetric("randomValue", randomValueMetric)
 	log.Printf("Finish collect metrics")
-	ch <- metricsStorage
+}
+
+func (c Collector) SendMetrics() {
+	log.Printf("Send metric")
+	counterMetrics, gaugeMetrics := c.service.GetAllMetrics()
+	for metricName := range gaugeMetrics {
+		metricValue := gaugeMetrics[metricName]
+
+		methodURL := fmt.Sprintf("/update/gauge/%s/%f", metricName, metricValue)
+		_, err := c.httpClient.SendPostRequest(methodURL)
+		if err != nil {
+			log.Fatalf("Cannot send request to server to set metric %s", metricName)
+			continue
+		}
+	}
+	for metricName := range counterMetrics {
+		metricValue := counterMetrics[metricName]
+
+		methodURL := fmt.Sprintf("/update/counter/%s/%d", metricName, metricValue)
+		_, err := c.httpClient.SendPostRequest(methodURL)
+		if err != nil {
+			log.Fatalf("Cannot send request to server to set metric %s", metricName)
+			continue
+		}
+	}
+	log.Printf("Finish send metrics")
+
 }

@@ -4,9 +4,9 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/sincin-v/collector/internal/common/storage"
 	"github.com/sincin-v/collector/internal/server/config"
 	"github.com/sincin-v/collector/internal/server/router"
-	"github.com/sincin-v/collector/internal/storage"
 )
 
 func main() {

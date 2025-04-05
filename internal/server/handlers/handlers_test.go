@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/sincin-v/collector/internal/server/service"
-	"github.com/sincin-v/collector/internal/storage"
+	"github.com/sincin-v/collector/internal/common/service"
+	"github.com/sincin-v/collector/internal/common/storage"
 )
 
 func TestHandler_UpdateMetricHandler(t *testing.T) {
