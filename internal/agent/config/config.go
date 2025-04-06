@@ -14,12 +14,6 @@ type Config struct {
 	PollInterval   time.Duration `env:"POLL_INTERVAL"`
 }
 
-type AgentConfig struct {
-	ServerHost     string
-	ReportInterval time.Duration
-	PollInterval   time.Duration
-}
-
 func GetAgentConfig() (*Config, error) {
 	cfg := &Config{}
 
@@ -29,7 +23,7 @@ func GetAgentConfig() (*Config, error) {
 
 	flag.Parse()
 
-	err := env.Parse(&cfg)
+	err := env.Parse(cfg)
 	if err != nil {
 		log.Printf("Cannot parse env")
 	}
