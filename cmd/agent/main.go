@@ -7,22 +7,24 @@ import (
 	"github.com/sincin-v/collector/internal/agent/clients/rest"
 	"github.com/sincin-v/collector/internal/agent/config"
 	"github.com/sincin-v/collector/internal/agent/helpers/metrics"
-	"github.com/sincin-v/collector/internal/common/service"
-	"github.com/sincin-v/collector/internal/common/storage"
+	"github.com/sincin-v/collector/internal/service"
+	"github.com/sincin-v/collector/internal/storage"
 )
 
 func main() {
 	log.Printf("Start agent work")
-	agentConfig := config.GetAgentConfig()
+	agentConfig, err := config.GetAgentConfig()
+	if err != nil {
+		log.Fatalf("Cannot get agent params for start")
+	}
 
 	log.Printf("Send metrics to %s", agentConfig.ServerHost)
-	metricStorage := storage.New()
-	service := service.New(&metricStorage)
+	memStorage := storage.New()
+	service := service.New(&memStorage)
 	hc := rest.New(agentConfig.ServerHost)
 	metricsCollector := metrics.New(&service, hc)
 	go metricsCollector.StartSendMetrics(agentConfig.ReportInterval)
 	for {
-		// go metricsCollector.StartCollectMetrics(pollInterval)
 		go metricsCollector.CollectMetrics()
 
 		time.Sleep(agentConfig.PollInterval)

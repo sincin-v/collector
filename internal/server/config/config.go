@@ -7,31 +7,19 @@ import (
 	"github.com/caarlos0/env/v6"
 )
 
-type EnvConfig struct {
-	Address string `env:"ADDRESS"`
+type Config struct {
+	Host string `env:"ADDRESS"`
 }
 
-type ServerConfig struct {
-	Host string
-}
+func GetServerConfig() (*Config, error) {
+	cfg := &Config{}
 
-func GetServerConfig() ServerConfig {
-	var cfg ServerConfig
-	var envCfg EnvConfig
-
-	var argHostStr = flag.String("a", "localhost:8080", "Listen host and port")
+	flag.StringVar(&cfg.Host, "a", "localhost:8080", "Listen host and port")
 	flag.Parse()
-
-	err := env.Parse(&envCfg)
+	var err = env.Parse(cfg)
 	if err != nil {
-		log.Printf("Env is empty")
+		log.Printf("Cannot parse env")
+		return nil, err
 	}
-
-	if envCfg.Address != "" {
-		cfg.Host = envCfg.Address
-	} else {
-		cfg.Host = *argHostStr
-	}
-
-	return cfg
+	return cfg, nil
 }

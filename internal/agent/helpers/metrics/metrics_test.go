@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/sincin-v/collector/internal/agent/clients/rest"
-	"github.com/sincin-v/collector/internal/common/service"
-	"github.com/sincin-v/collector/internal/common/storage"
+	"github.com/sincin-v/collector/internal/service"
+	"github.com/sincin-v/collector/internal/storage"
 )
 
 func TestCollector_CollectMetrics(t *testing.T) {

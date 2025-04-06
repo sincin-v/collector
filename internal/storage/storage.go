@@ -6,26 +6,26 @@ import (
 	"sync"
 )
 
-type MetricStorage struct {
+type MemStorage struct {
 	mu      sync.RWMutex
 	gauge   map[string]float64
 	counter map[string]int64
 }
 
-func New() MetricStorage {
-	return MetricStorage{
+func New() MemStorage {
+	return MemStorage{
 		gauge:   map[string]float64{},
 		counter: map[string]int64{},
 	}
 }
 
-func (ms *MetricStorage) CreateGaugeMetric(name string, value float64) {
+func (ms *MemStorage) CreateGaugeMetric(name string, value float64) {
 	ms.mu.Lock()
 	ms.gauge[name] = value
 	ms.mu.Unlock()
 }
 
-func (ms *MetricStorage) CreateCounterMetric(name string, value int64) {
+func (ms *MemStorage) CreateCounterMetric(name string, value int64) {
 	ms.mu.Lock()
 	defer ms.mu.Unlock()
 	_, ok := ms.counter[name]
@@ -37,7 +37,7 @@ func (ms *MetricStorage) CreateCounterMetric(name string, value int64) {
 
 }
 
-func (ms *MetricStorage) GetMetric(metricType string, metricName string) (string, error) {
+func (ms *MemStorage) GetMetric(metricType string, metricName string) (string, error) {
 	ms.mu.Lock()
 	defer ms.mu.Unlock()
 	switch metricType {
@@ -58,9 +58,10 @@ func (ms *MetricStorage) GetMetric(metricType string, metricName string) (string
 	}
 }
 
-func (ms *MetricStorage) GetAllCountersMetrics() map[string]int64 {
+func (ms *MemStorage) GetAllCountersMetrics() map[string]int64 {
 	return ms.counter
 }
-func (ms *MetricStorage) GetAllGaugeMetrics() map[string]float64 {
+
+func (ms *MemStorage) GetAllGaugeMetrics() map[string]float64 {
 	return ms.gauge
 }

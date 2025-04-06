@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/sincin-v/collector/internal/common/service"
-	"github.com/sincin-v/collector/internal/common/storage"
+	"github.com/sincin-v/collector/internal/service"
+	"github.com/sincin-v/collector/internal/storage"
 )
 
 func TestHandler_UpdateMetricHandler(t *testing.T) {
@@ -36,7 +36,7 @@ func TestHandler_UpdateMetricHandler(t *testing.T) {
 				httpMethod:  http.MethodPost,
 			},
 			want: want{
-				code: 200,
+				code: http.StatusOK,
 			},
 		},
 		{
@@ -48,7 +48,7 @@ func TestHandler_UpdateMetricHandler(t *testing.T) {
 				httpMethod:  http.MethodPost,
 			},
 			want: want{
-				code: 200,
+				code: http.StatusOK,
 			},
 		},
 		{
@@ -60,7 +60,7 @@ func TestHandler_UpdateMetricHandler(t *testing.T) {
 				httpMethod:  http.MethodPost,
 			},
 			want: want{
-				code: 400,
+				code: http.StatusBadRequest,
 			},
 		},
 		{
@@ -72,7 +72,7 @@ func TestHandler_UpdateMetricHandler(t *testing.T) {
 				httpMethod:  http.MethodPost,
 			},
 			want: want{
-				code: 400,
+				code: http.StatusBadRequest,
 			},
 		},
 		{
@@ -84,7 +84,7 @@ func TestHandler_UpdateMetricHandler(t *testing.T) {
 				httpMethod:  http.MethodPost,
 			},
 			want: want{
-				code: 400,
+				code: http.StatusBadRequest,
 			},
 		},
 		{
@@ -96,7 +96,7 @@ func TestHandler_UpdateMetricHandler(t *testing.T) {
 				httpMethod:  http.MethodGet,
 			},
 			want: want{
-				code: 405,
+				code: http.StatusMethodNotAllowed,
 			},
 		},
 	}
@@ -129,7 +129,7 @@ func TestHandler_GetMetricHandler(t *testing.T) {
 	type fields struct {
 		metricType  string
 		metricName  string
-		metricValue string
+		metricValue int64
 	}
 	type args struct {
 		metricType string
@@ -149,26 +149,26 @@ func TestHandler_GetMetricHandler(t *testing.T) {
 	}{
 		{
 			name:   "positive test get counter metric handler",
-			fields: fields{"counter", "testCounterMetric", "1"},
+			fields: fields{"counter", "testCounterMetric", 1},
 			args: args{
 				metricType: "counter",
 				metricName: "testCounterMetric",
 				httpMethod: http.MethodGet,
 			},
 			want: want{
-				code: 200,
+				code: http.StatusOK,
 			},
 		},
 		{
 			name:   "negative test invalid method",
-			fields: fields{"counter", "testCounterMetric", "1"},
+			fields: fields{"counter", "testCounterMetric", 1},
 			args: args{
 				metricType: "histogram",
 				metricName: "testHistogramMetric",
 				httpMethod: http.MethodPost,
 			},
 			want: want{
-				code: 405,
+				code: http.StatusMethodNotAllowed,
 			},
 		},
 	}
@@ -176,7 +176,7 @@ func TestHandler_GetMetricHandler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			storage := storage.New()
 			service := service.New(&storage)
-			service.CreateMetric(tt.fields.metricType, tt.fields.metricName, tt.fields.metricValue)
+			service.CreateCounterMetric(tt.fields.metricName, tt.fields.metricValue)
 			h := &Handler{
 				service: service,
 			}
@@ -200,9 +200,10 @@ func TestHandler_GetMetricHandler(t *testing.T) {
 
 func TestHandler_GetAllMetricsHandler(t *testing.T) {
 	type fields struct {
-		metricType  string
-		metricName  string
-		metricValue string
+		counterMetricName  string
+		counterMetricValue int64
+		gaugeMetricName    string
+		gaugeMetricValue   float64
 	}
 	type args struct {
 		httpMethod string
@@ -220,32 +221,23 @@ func TestHandler_GetAllMetricsHandler(t *testing.T) {
 	}{
 		{
 			name:   "positive test get all counter metric handler",
-			fields: fields{"counter", "testCounterMetric", "1"},
+			fields: fields{"testCounterMetric", 1, "testGaugeMetric", 1.0},
 			args: args{
 				httpMethod: http.MethodGet,
 			},
 			want: want{
-				code: 200,
+				code: http.StatusOK,
 			},
 		},
-		{
-			name:   "positive test get all gauge metric handler",
-			fields: fields{"gauge", "testCounterMetric", "1.0"},
-			args: args{
-				httpMethod: http.MethodGet,
-			},
-			want: want{
-				code: 200,
-			},
-		},
+
 		{
 			name:   "negative test invalid method",
-			fields: fields{"counter", "testCounterMetric", "1"},
+			fields: fields{"testCounterMetric", 1, "testGaugeMetric", 1.0},
 			args: args{
 				httpMethod: http.MethodPost,
 			},
 			want: want{
-				code: 405,
+				code: http.StatusMethodNotAllowed,
 			},
 		},
 	}
@@ -253,7 +245,9 @@ func TestHandler_GetAllMetricsHandler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			storage := storage.New()
 			service := service.New(&storage)
-			service.CreateMetric(tt.fields.metricType, tt.fields.metricName, tt.fields.metricValue)
+			service.CreateCounterMetric(tt.fields.counterMetricName, tt.fields.counterMetricValue)
+			service.CreateGaugeMetric(tt.fields.gaugeMetricName, tt.fields.gaugeMetricValue)
+			// service.CreateMetric(tt.fields.metricType, tt.fields.metricName, tt.fields.metricValue)
 			h := &Handler{
 				service: service,
 			}

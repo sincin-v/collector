@@ -4,23 +4,27 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/sincin-v/collector/internal/common/storage"
 	"github.com/sincin-v/collector/internal/server/config"
 	"github.com/sincin-v/collector/internal/server/router"
+	"github.com/sincin-v/collector/internal/storage"
 )
 
 func main() {
 
-	serverConfig := config.GetServerConfig()
+	serverConfig, err := config.GetServerConfig()
+
+	if err != nil {
+		log.Fatalf("Cannot get server params for start")
+	}
 
 	log.Printf("Start server work on %s", serverConfig.Host)
 
-	metricStorage := storage.New()
+	memStorage := storage.New()
 
-	serverRouter := router.CreateRouter(&metricStorage)
+	serverRouter := router.CreateRouter(&memStorage)
 
-	err := http.ListenAndServe(serverConfig.Host, serverRouter)
-	if err != nil {
+	httpErr := http.ListenAndServe(serverConfig.Host, serverRouter)
+	if httpErr != nil {
 		panic(err)
 	}
 

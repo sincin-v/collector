@@ -23,7 +23,7 @@ func (h HTTPClient) SendPostRequest(url string) (*http.Response, error) {
 	log.Printf("Send request to url: %s", url)
 	resp, err := http.Post(url, "text/plain", nil)
 	if err != nil || resp.StatusCode != http.StatusOK {
-		log.Fatalf("Error to send request %s", url)
+		log.Printf("Error to send request %s Error: %s", url, err)
 		return nil, err
 	}
 	defer resp.Body.Close()

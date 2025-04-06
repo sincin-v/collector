@@ -29,7 +29,7 @@ func TestMetricStorage_CreateGaugeMetric(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ms := MetricStorage{
+			ms := MemStorage{
 				gauge:   tt.fields.gauge,
 				counter: tt.fields.counter,
 			}
@@ -71,7 +71,7 @@ func TestMetricStorage_CreateCounterMetric(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ms := MetricStorage{
+			ms := MemStorage{
 				gauge:   tt.fields.gauge,
 				counter: tt.fields.counter,
 			}
@@ -135,7 +135,7 @@ func TestMetricStorage_GetMetric(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ms := MetricStorage{
+			ms := MemStorage{
 				gauge:   tt.fields.gauge,
 				counter: tt.fields.counter,
 			}
