@@ -9,7 +9,7 @@ import (
 
 type Config struct {
 	Host     string `env:"ADDRESS"`
-	LogLevel string `env:"LOG_LEVEL,default=INFO"`
+	LogLevel string `env:"LOG_LEVEL" envDefault:"INFO"`
 }
 
 func GetServerConfig() (*Config, error) {
