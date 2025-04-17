@@ -1,12 +1,15 @@
 package metrics
 
 import (
-	"fmt"
+	"bytes"
+	"encoding/json"
 	"log"
 	"math/rand"
 	"net/http"
 	"runtime"
 	"time"
+
+	"github.com/sincin-v/collector/internal/models"
 )
 
 var PollCountValue int = 0
@@ -52,7 +55,7 @@ type MetricsService interface {
 }
 
 type HTTPClient interface {
-	SendPostRequest(string) (*http.Response, error)
+	SendPostRequest(string, bytes.Buffer) (*http.Response, error)
 }
 
 type Collector struct {
@@ -132,11 +135,21 @@ func (c Collector) CollectMetrics() {
 func (c Collector) SendMetrics() {
 	log.Printf("Send metric")
 	counterMetrics, gaugeMetrics := c.service.GetAllMetrics()
+	var methodURL = "/update"
+
 	for metricName := range gaugeMetrics {
 		metricValue := gaugeMetrics[metricName]
 
-		methodURL := fmt.Sprintf("/update/gauge/%s/%f", metricName, metricValue)
-		res, err := c.httpClient.SendPostRequest(methodURL)
+		metricData := models.Metrics{
+			ID:    metricName,
+			MType: "gauge",
+			Value: &metricValue,
+		}
+
+		var buf bytes.Buffer
+		encoder := json.NewEncoder(&buf)
+		encoder.Encode(metricData)
+		res, err := c.httpClient.SendPostRequest(methodURL, buf)
 		if err != nil {
 			log.Printf("Cannot send request to server to set metric %s", metricName)
 			continue
@@ -147,8 +160,15 @@ func (c Collector) SendMetrics() {
 	for metricName := range counterMetrics {
 		metricValue := counterMetrics[metricName]
 
-		methodURL := fmt.Sprintf("/update/counter/%s/%d", metricName, metricValue)
-		res, err := c.httpClient.SendPostRequest(methodURL)
+		metricData := models.Metrics{
+			ID:    metricName,
+			MType: "gauge",
+			Delta: &metricValue,
+		}
+		var buf bytes.Buffer
+		encoder := json.NewEncoder(&buf)
+		encoder.Encode(metricData)
+		res, err := c.httpClient.SendPostRequest(methodURL, buf)
 		if err != nil {
 			log.Printf("Cannot send request to server to set metric %s", metricName)
 			continue

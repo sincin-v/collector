@@ -14,7 +14,9 @@ func CreateRouter(storage *storage.MemStorage) *chi.Mux {
 	router := chi.NewRouter()
 
 	router.Post("/update/{metricType}/{metricName}/{metricValue}", mw.WithLogger(h.UpdateMetricHandler))
+	router.Post("/update/", mw.WithLogger(h.UpdateMetricJSONHandler))
 	router.Get("/value/{metricType}/{metricName}", mw.WithLogger(h.GetMetricHandler))
+	router.Post("/value/", mw.WithLogger(h.GetMetricJSONHandler))
 	router.Get("/", mw.WithLogger(h.GetAllMetricsHandler))
 
 	return router
