@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/sincin-v/collector/internal/compress"
 	"github.com/sincin-v/collector/internal/models"
 )
 
@@ -86,7 +87,7 @@ func (c *Collector) GetMetricsFromMemStats() {
 	var metrics runtime.MemStats
 	runtime.ReadMemStats(&metrics)
 	c.memStatsMetric = map[string]float64{
-		"Alloc": float64(metrics.Alloc),
+		"Alloc":         float64(metrics.Alloc),
 		"TotalAlloc":    float64(metrics.TotalAlloc),
 		"Sys":           float64(metrics.Sys),
 		"Lookups":       float64(metrics.Lookups),
@@ -169,7 +170,14 @@ func (c Collector) SendMetrics() {
 		var buf bytes.Buffer
 		encoder := json.NewEncoder(&buf)
 		encoder.Encode(metricData)
-		res, err := c.httpClient.SendPostRequest(methodURL, buf)
+
+		metricsData, errCompress := compress.Compress(buf)
+		if errCompress != nil {
+			log.Printf("Cannot compress data of metric %s", metricName)
+			continue
+		}
+
+		res, err := c.httpClient.SendPostRequest(methodURL, *metricsData)
 		if err != nil {
 			log.Printf("Cannot send request to server to set metric %s", metricName)
 			continue

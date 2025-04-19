@@ -17,12 +17,18 @@ func New(baseURL string) HTTPClient {
 }
 
 func (h HTTPClient) SendPostRequest(url string, body bytes.Buffer) (*http.Response, error) {
+	client := &http.Client{}
 	url = h.baseURL + url
 	if !strings.HasPrefix(url, "http") {
 		url = fmt.Sprintf("http://%s", url)
 	}
 	log.Printf("Send request to url: %s", url)
-	resp, err := http.Post(url, "application/json", &body)
+	request, _ := http.NewRequest(http.MethodPost, url, &body)
+	request.Header.Set("Content-Encoding", "gzip")
+	request.Header.Set("Accept-Encoding", "gzip")
+	request.Header.Set("Content-Type", "application/json")
+	resp, err := client.Do(request)
+	// resp, err := http.Post(url, "application/json", &body)
 	if err != nil || resp.StatusCode != http.StatusOK {
 		log.Printf("Error to send request %s Error: %s", url, err)
 		return nil, err

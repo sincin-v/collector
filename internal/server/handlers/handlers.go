@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"strconv"
 
@@ -31,7 +30,7 @@ func New(s MetricsService) Handler {
 
 func (h Handler) UpdateMetricHandler(res http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodPost {
-		log.Printf("Error: %d", http.StatusMethodNotAllowed)
+		logger.Log.Errorf("Error: %d", http.StatusMethodNotAllowed)
 		res.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
@@ -39,13 +38,13 @@ func (h Handler) UpdateMetricHandler(res http.ResponseWriter, req *http.Request)
 	metricType := req.PathValue("metricType")
 	metricName := req.PathValue("metricName")
 	metricValue := req.PathValue("metricValue")
-	log.Printf("Method: %s Url: %s, metricType: %s, metricName: %s, metricValue: %s", req.Method, req.URL.Path, metricType, metricName, metricValue)
+	logger.Log.Infof("Method: %s Url: %s, metricType: %s, metricName: %s, metricValue: %s", req.Method, req.URL.Path, metricType, metricName, metricValue)
 
 	switch metricType {
 	case "gauge":
 		value, err := strconv.ParseFloat(metricValue, 64)
 		if err != nil {
-			log.Printf("Invalid value (%s) for type (%s)", metricValue, metricType)
+			logger.Log.Errorf("Invalid value (%s) for type (%s)", metricValue, metricType)
 			res.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -53,29 +52,29 @@ func (h Handler) UpdateMetricHandler(res http.ResponseWriter, req *http.Request)
 	case "counter":
 		value, err := strconv.ParseInt(metricValue, 10, 64)
 		if err != nil {
-			log.Printf("Invalid value (%s) for type (%s)", metricValue, metricType)
+			logger.Log.Errorf("Invalid value (%s) for type (%s)", metricValue, metricType)
 			res.WriteHeader(http.StatusBadRequest)
 			return
 		}
 		h.service.CreateCounterMetric(metricName, value)
 	default:
-		log.Printf("Invalid type of new metric (%s)", metricType)
+		logger.Log.Errorf("Invalid type of new metric (%s)", metricType)
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	newMetricvalue, err := h.service.GetMetric(metricType, metricName)
 	if err != nil {
-		log.Printf("Cannot set new value (%s) for metric '%s' Error: %s", metricValue, metricName, err)
+		logger.Log.Errorf("Cannot set new value (%s) for metric '%s' Error: %s", metricValue, metricName, err)
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	log.Printf("New value of metric %s (type: %s) = %s", metricName, metricType, newMetricvalue)
+	logger.Log.Infof("New value of metric %s (type: %s) = %s", metricName, metricType, newMetricvalue)
 	res.WriteHeader(http.StatusOK)
 }
 
 func (h Handler) GetMetricHandler(res http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodGet {
-		log.Printf("Error: %d", http.StatusMethodNotAllowed)
+		logger.Log.Errorf("Error: %d", http.StatusMethodNotAllowed)
 		res.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
@@ -83,7 +82,7 @@ func (h Handler) GetMetricHandler(res http.ResponseWriter, req *http.Request) {
 	metricName := req.PathValue("metricName")
 	metric, err := h.service.GetMetric(metricType, metricName)
 	if err != nil {
-		log.Printf("Metric %s not found. Error: %s", metricName, err)
+		logger.Log.Errorf("Metric %s not found. Error: %s", metricName, err)
 		res.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -92,8 +91,9 @@ func (h Handler) GetMetricHandler(res http.ResponseWriter, req *http.Request) {
 }
 
 func (h Handler) GetAllMetricsHandler(res http.ResponseWriter, req *http.Request) {
+	res.Header().Set("Content-Type", "text/html")
 	if req.Method != http.MethodGet {
-		log.Printf("Error: %d", http.StatusMethodNotAllowed)
+		logger.Log.Errorf("Error: %d", http.StatusMethodNotAllowed)
 		res.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
@@ -101,7 +101,7 @@ func (h Handler) GetAllMetricsHandler(res http.ResponseWriter, req *http.Request
 	for metricName := range counterMetric {
 		metricValue, err := h.service.GetMetric("counter", metricName)
 		if err != nil {
-			log.Printf("Cannot get value of metric '%s' . Error: %s", metricName, err)
+			logger.Log.Errorf("Cannot get value of metric '%s' . Error: %s", metricName, err)
 			continue
 		}
 		io.WriteString(res, fmt.Sprintf("%s = %s\n", metricName, metricValue))
@@ -109,7 +109,7 @@ func (h Handler) GetAllMetricsHandler(res http.ResponseWriter, req *http.Request
 	for metricName := range gaugeMetrics {
 		metricValue, err := h.service.GetMetric("gauge", metricName)
 		if err != nil {
-			log.Printf("Cannot get value of metric '%s' . Error: %s", metricName, err)
+			logger.Log.Errorf("Cannot get value of metric '%s' . Error: %s", metricName, err)
 			continue
 		}
 		io.WriteString(res, fmt.Sprintf("%s = %s\n", metricName, metricValue))

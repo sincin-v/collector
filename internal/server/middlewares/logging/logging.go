@@ -1,4 +1,4 @@
-package middlewares
+package logging
 
 import (
 	"net/http"
@@ -25,12 +25,12 @@ func (r *newResponseWriter) Write(b []byte) (int, error) {
 	return size, err
 }
 
-func (r *newResponseWriter) WriteHEader(statusCode int) {
+func (r *newResponseWriter) WriteHeader(statusCode int) {
 	r.ResponseWriter.WriteHeader(statusCode)
 	r.responseData.status = statusCode
 }
 
-func WithLogger(h http.HandlerFunc) http.HandlerFunc {
+func LoggerMiddleware(h http.Handler) http.Handler {
 	logFunction := func(w http.ResponseWriter, r *http.Request) {
 
 		url := r.URL.Path
