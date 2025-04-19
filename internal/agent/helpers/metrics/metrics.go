@@ -85,7 +85,8 @@ func (c Collector) StartSendMetrics(reportInterval time.Duration) {
 func (c *Collector) GetMetricsFromMemStats() {
 	var metrics runtime.MemStats
 	runtime.ReadMemStats(&metrics)
-	c.memStatsMetric = map[string]float64{"Alloc": float64(metrics.Alloc),
+	c.memStatsMetric = map[string]float64{
+		"Alloc": float64(metrics.Alloc),
 		"TotalAlloc":    float64(metrics.TotalAlloc),
 		"Sys":           float64(metrics.Sys),
 		"Lookups":       float64(metrics.Lookups),
@@ -127,7 +128,7 @@ func (c Collector) CollectMetrics() {
 	}
 
 	c.service.CreateCounterMetric("PollCount", 1)
-	c.service.CreateGaugeMetric("randomValue", rand.Float64())
+	c.service.CreateGaugeMetric("RandomValue", rand.Float64())
 
 	log.Printf("Finish collect metrics")
 }
@@ -135,11 +136,11 @@ func (c Collector) CollectMetrics() {
 func (c Collector) SendMetrics() {
 	log.Printf("Send metric")
 	counterMetrics, gaugeMetrics := c.service.GetAllMetrics()
-	var methodURL = "/update"
+	var methodURL = "/update/"
 
 	for metricName := range gaugeMetrics {
 		metricValue := gaugeMetrics[metricName]
-
+		log.Printf("Send metric %s", metricName)
 		metricData := models.Metrics{
 			ID:    metricName,
 			MType: "gauge",
@@ -159,10 +160,10 @@ func (c Collector) SendMetrics() {
 	}
 	for metricName := range counterMetrics {
 		metricValue := counterMetrics[metricName]
-
+		log.Printf("Send metric %s", metricName)
 		metricData := models.Metrics{
 			ID:    metricName,
-			MType: "gauge",
+			MType: "counter",
 			Delta: &metricValue,
 		}
 		var buf bytes.Buffer

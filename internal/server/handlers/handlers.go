@@ -189,6 +189,7 @@ func (h Handler) GetMetricJSONHandler(res http.ResponseWriter, req *http.Request
 		res.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
+	res.Header().Set("Content-Type", "application/json")
 
 	var inputData models.Metrics
 	decoder := json.NewDecoder(req.Body)
@@ -229,7 +230,6 @@ func (h Handler) GetMetricJSONHandler(res http.ResponseWriter, req *http.Request
 	}
 
 	res.WriteHeader(http.StatusOK)
-	res.Header().Set("Content-Type", "application/json")
 	encoder := json.NewEncoder(res)
 	if err := encoder.Encode(resp); err != nil {
 		res.WriteHeader(http.StatusBadRequest)
