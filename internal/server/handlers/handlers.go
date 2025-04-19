@@ -1,11 +1,15 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"strconv"
+
+	"github.com/sincin-v/collector/internal/logger"
+	"github.com/sincin-v/collector/internal/models"
 )
 
 type MetricsService interface {
@@ -111,4 +115,124 @@ func (h Handler) GetAllMetricsHandler(res http.ResponseWriter, req *http.Request
 		io.WriteString(res, fmt.Sprintf("%s = %s\n", metricName, metricValue))
 	}
 	res.WriteHeader(http.StatusOK)
+}
+
+func (h Handler) UpdateMetricJSONHandler(res http.ResponseWriter, req *http.Request) {
+	if req.Method != http.MethodPost {
+		logger.Log.Errorf("Error: %d", http.StatusMethodNotAllowed)
+		res.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	var inputData models.Metrics
+	decoder := json.NewDecoder(req.Body)
+	if err := decoder.Decode(&inputData); err != nil {
+		logger.Log.Errorf("Cannot decode input body Error: %s", err)
+		res.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	resp := models.Metrics{
+		ID:    inputData.ID,
+		MType: inputData.MType,
+	}
+
+	switch inputData.MType {
+	case "gauge":
+		h.service.CreateGaugeMetric(inputData.ID, *inputData.Value)
+	case "counter":
+		h.service.CreateCounterMetric(inputData.ID, *inputData.Delta)
+	default:
+		logger.Log.Infof("Invalid type of new metric (%s)", inputData.MType)
+		res.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	newMetricvalue, err := h.service.GetMetric(inputData.MType, inputData.ID)
+	if err != nil {
+		logger.Log.Errorf("Cannot set new value for metric '%s' Error: %s", inputData.ID, err)
+		res.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	switch inputData.MType {
+	case "gauge":
+		value, err := strconv.ParseFloat(newMetricvalue, 64)
+		if err != nil {
+			logger.Log.Debugf("Invalid value (%s) for type (gauge)", value)
+			res.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		resp.Value = &value
+	case "counter":
+		value, err := strconv.ParseInt(newMetricvalue, 10, 64)
+		if err != nil {
+			logger.Log.Debugf("Invalid value (%s) for type (counter)", value)
+			res.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		resp.Delta = &value
+	}
+
+	logger.Log.Infof("New value of metric %s (type: %s) = %s", inputData.ID, inputData.MType, newMetricvalue)
+	res.WriteHeader(http.StatusOK)
+	res.Header().Set("Content-Type", "application/json")
+	encoder := json.NewEncoder(res)
+	if err := encoder.Encode(resp); err != nil {
+		res.WriteHeader(http.StatusBadRequest)
+	}
+
+}
+
+func (h Handler) GetMetricJSONHandler(res http.ResponseWriter, req *http.Request) {
+	if req.Method != http.MethodPost {
+		logger.Log.Errorf("Error: %d", http.StatusMethodNotAllowed)
+		res.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	res.Header().Set("Content-Type", "application/json")
+
+	var inputData models.Metrics
+	decoder := json.NewDecoder(req.Body)
+	if err := decoder.Decode(&inputData); err != nil {
+		logger.Log.Errorf("Cannot decode input body Error: %s", err)
+		res.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	metric, err := h.service.GetMetric(inputData.MType, inputData.ID)
+	if err != nil {
+		logger.Log.Errorf("Metric %s not found. Error: %s", inputData.ID, err)
+		res.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	resp := models.Metrics{
+		ID:    inputData.ID,
+		MType: inputData.MType,
+	}
+	switch inputData.MType {
+	case "gauge":
+		value, err := strconv.ParseFloat(metric, 64)
+		if err != nil {
+			logger.Log.Debugf("Invalid value (%s) for type (gauge)", value)
+			res.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		resp.Value = &value
+	case "counter":
+		value, err := strconv.ParseInt(metric, 10, 64)
+		if err != nil {
+			logger.Log.Debugf("Invalid value (%s) for type (counter)", value)
+			res.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		resp.Delta = &value
+	}
+
+	res.WriteHeader(http.StatusOK)
+	encoder := json.NewEncoder(res)
+	if err := encoder.Encode(resp); err != nil {
+		res.WriteHeader(http.StatusBadRequest)
+	}
+
 }
