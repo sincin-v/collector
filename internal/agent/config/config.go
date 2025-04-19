@@ -12,6 +12,7 @@ type Config struct {
 	ServerHost     string        `env:"ADDRESS"`
 	ReportInterval time.Duration `env:"REPORT_INTERVAL"`
 	PollInterval   time.Duration `env:"POLL_INTERVAL"`
+	LogLevel       string        `env:"LOG_LEVEL" envDefault:"INFO"`
 }
 
 func GetAgentConfig() (*Config, error) {
