@@ -15,6 +15,7 @@ func Compress(data bytes.Buffer) (*bytes.Buffer, error) {
 
 		return nil, err
 	}
+	compressWriter.Close()
 	return &b, nil
 
 }

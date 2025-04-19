@@ -9,13 +9,13 @@ import (
 
 type compressWriter struct {
 	w  http.ResponseWriter
-	cw gzip.Writer
+	zw gzip.Writer
 }
 
 func newCompressWriter(w http.ResponseWriter) *compressWriter {
 	return &compressWriter{
 		w:  w,
-		cw: *gzip.NewWriter(w),
+		zw: *gzip.NewWriter(w),
 	}
 }
 
@@ -24,7 +24,7 @@ func (cw *compressWriter) Header() http.Header {
 }
 
 func (cw *compressWriter) Write(p []byte) (int, error) {
-	return cw.cw.Write(p)
+	return cw.zw.Write(p)
 }
 
 func (cw *compressWriter) WriteHeader(statusCode int) {
@@ -35,12 +35,12 @@ func (cw *compressWriter) WriteHeader(statusCode int) {
 }
 
 func (cw *compressWriter) Close() error {
-	return cw.cw.Close()
+	return cw.zw.Close()
 }
 
 type compressReader struct {
 	r  io.ReadCloser
-	cr *gzip.Reader
+	zr *gzip.Reader
 }
 
 func newCompressReader(r io.ReadCloser) (*compressReader, error) {
@@ -51,19 +51,19 @@ func newCompressReader(r io.ReadCloser) (*compressReader, error) {
 
 	return &compressReader{
 		r:  r,
-		cr: cr,
+		zr: cr,
 	}, nil
 }
 
 func (cr *compressReader) Read(p []byte) (n int, err error) {
-	return cr.cr.Read(p)
+	return cr.zr.Read(p)
 }
 
 func (cr *compressReader) Close() error {
 	if err := cr.r.Close(); err != nil {
 		return err
 	}
-	return cr.cr.Close()
+	return cr.zr.Close()
 }
 
 func CompressMiddleware(h http.Handler) http.Handler {
@@ -86,7 +86,7 @@ func CompressMiddleware(h http.Handler) http.Handler {
 				return
 			}
 			r.Body = cr
-			defer cr.cr.Close()
+			defer cr.Close()
 		}
 
 		h.ServeHTTP(writer, r)

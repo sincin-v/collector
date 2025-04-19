@@ -16,10 +16,8 @@ func CreateRouter(storage *storage.MemStorage) *chi.Mux {
 
 	router.Use(logMw.LoggerMiddleware)
 	router.Use(zipMw.CompressMiddleware)
-	// router.Post("/update/", zipMw.CompressMiddleware(h.UpdateMetricJSONHandler))
 	router.Post("/update/", h.UpdateMetricJSONHandler)
 	router.Post("/update/{metricType}/{metricName}/{metricValue}", h.UpdateMetricHandler)
-	// router.Post("/value/", zipMw.CompressMiddleware(h.GetMetricJSONHandler))
 	router.Post("/value/", h.GetMetricJSONHandler)
 	router.Get("/value/{metricType}/{metricName}", h.GetMetricHandler)
 	router.Get("/", h.GetAllMetricsHandler)

@@ -151,7 +151,14 @@ func (c Collector) SendMetrics() {
 		var buf bytes.Buffer
 		encoder := json.NewEncoder(&buf)
 		encoder.Encode(metricData)
-		res, err := c.httpClient.SendPostRequest(methodURL, buf)
+
+		metricsData, errCompress := compress.Compress(buf)
+		if errCompress != nil {
+			log.Printf("Cannot compress data of metric %s", metricName)
+			continue
+		}
+
+		res, err := c.httpClient.SendPostRequest(methodURL, *metricsData)
 		if err != nil {
 			log.Printf("Cannot send request to server to set metric %s", metricName)
 			continue

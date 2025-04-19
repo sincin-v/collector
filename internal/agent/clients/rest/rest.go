@@ -28,7 +28,6 @@ func (h HTTPClient) SendPostRequest(url string, body bytes.Buffer) (*http.Respon
 	request.Header.Set("Accept-Encoding", "gzip")
 	request.Header.Set("Content-Type", "application/json")
 	resp, err := client.Do(request)
-	// resp, err := http.Post(url, "application/json", &body)
 	if err != nil || resp.StatusCode != http.StatusOK {
 		log.Printf("Error to send request %s Error: %s", url, err)
 		return nil, err
