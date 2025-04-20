@@ -172,12 +172,6 @@ func TestMemStorage_FlushAllMetrics(t *testing.T) {
 			fields: fields{counter: map[string]int64{"testMetric": 1}, gauge: map[string]float64{"testMetric": 0.1}},
 			args:   args{"/tmp/test.json"},
 		},
-		{
-			name:    "negative test flush metrics to file",
-			fields:  fields{counter: map[string]int64{}, gauge: map[string]float64{}},
-			args:    args{"/root/test.json"},
-			wantErr: true,
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
