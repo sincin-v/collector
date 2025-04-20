@@ -6,11 +6,9 @@ import (
 	zipMw "github.com/sincin-v/collector/internal/server/middlewares/compressing"
 	logMw "github.com/sincin-v/collector/internal/server/middlewares/logging"
 	"github.com/sincin-v/collector/internal/service"
-	"github.com/sincin-v/collector/internal/storage"
 )
 
-func CreateRouter(storage *storage.MemStorage) *chi.Mux {
-	service := service.New(storage)
+func CreateRouter(service *service.MetricsService) *chi.Mux {
 	h := handlers.New(service)
 	router := chi.NewRouter()
 

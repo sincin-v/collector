@@ -6,14 +6,12 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/sincin-v/collector/internal/logger"
 	"github.com/sincin-v/collector/internal/service"
 	"github.com/sincin-v/collector/internal/storage"
-	"github.com/sincin-v/collector/internal/logger"
 )
 
-
 var logErr = logger.Initialize("INFO")
-
 
 func TestHandler_UpdateMetricHandler(t *testing.T) {
 	type args struct {
