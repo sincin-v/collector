@@ -3,6 +3,8 @@ package metrics
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"log"
 	"math/rand"
 	"net/http"
@@ -14,36 +16,6 @@ import (
 )
 
 var PollCountValue int = 0
-
-var collectMetricsNames = [...]string{
-	"Alloc",
-	"TotalAlloc",
-	"Sys",
-	"Lookups",
-	"Mallocs",
-	"Frees",
-	"HeapAlloc",
-	"HeapSys",
-	"HeapIdle",
-	"HeapInuse",
-	"HeapReleased",
-	"HeapObjects",
-	"StackInuse",
-	"StackSys",
-	"MSpanInuse",
-	"MSpanSys",
-	"MCacheInuse",
-	"MCacheSys",
-	"BuckHashSys",
-	"GCSys",
-	"OtherSys",
-	"NextGC",
-	"LastGC",
-	"PauseTotalNs",
-	"NumGC",
-	"NumForcedGC",
-	"GCCPUFraction",
-}
 
 type MemMetrics struct {
 }
@@ -150,7 +122,11 @@ func (c Collector) SendMetrics() {
 
 		var buf bytes.Buffer
 		encoder := json.NewEncoder(&buf)
-		encoder.Encode(metricData)
+		errEncode := encoder.Encode(metricData)
+		if errEncode != nil {
+			log.Printf("Cannot encode data err: %s", errEncode)
+			continue
+		}
 
 		metricsData, errCompress := compress.Compress(buf)
 		if errCompress != nil {
@@ -159,11 +135,15 @@ func (c Collector) SendMetrics() {
 		}
 
 		res, err := c.httpClient.SendPostRequest(methodURL, *metricsData)
+		defer func() {
+			if errBodyClose := res.Body.Close(); errBodyClose != nil {
+				err = errors.Join(err, fmt.Errorf("close body error: %w", errBodyClose))
+			}
+		}()
 		if err != nil {
 			log.Printf("Cannot send request to server to set metric %s", metricName)
 			continue
 		}
-		defer res.Body.Close()
 
 	}
 	for metricName := range counterMetrics {
@@ -176,7 +156,11 @@ func (c Collector) SendMetrics() {
 		}
 		var buf bytes.Buffer
 		encoder := json.NewEncoder(&buf)
-		encoder.Encode(metricData)
+		errEncode := encoder.Encode(metricData)
+		if errEncode != nil {
+			log.Printf("Cannot encode data err: %s", errEncode)
+			continue
+		}
 
 		metricsData, errCompress := compress.Compress(buf)
 		if errCompress != nil {
@@ -185,11 +169,15 @@ func (c Collector) SendMetrics() {
 		}
 
 		res, err := c.httpClient.SendPostRequest(methodURL, *metricsData)
+		defer func() {
+			if errBodyClose := res.Body.Close(); errBodyClose != nil {
+				err = errors.Join(err, fmt.Errorf("close body error: %w", errBodyClose))
+			}
+		}()
 		if err != nil {
 			log.Printf("Cannot send request to server to set metric %s", metricName)
 			continue
 		}
-		defer res.Body.Close()
 
 	}
 	log.Printf("Finish send metrics")

@@ -36,7 +36,15 @@ func main() {
 		}
 	}
 
-	go metricCollector.SaveMetrics(int(serverConfig.StoreInterval))
+	var errSaveMetric error
+
+	go func() {
+		errSaveMetric = metricCollector.SaveMetrics(int(serverConfig.StoreInterval))
+		if errSaveMetric != nil {
+			logger.Log.Error("Error save metric: %s", errSaveMetric)
+		}
+	}()
+
 	serverRouter := router.CreateRouter(&metricService)
 
 	httpErr := http.ListenAndServe(serverConfig.Host, serverRouter)

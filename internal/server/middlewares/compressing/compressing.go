@@ -2,6 +2,8 @@ package compress
 
 import (
 	"compress/gzip"
+	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -28,7 +30,7 @@ func (cw *compressWriter) Write(p []byte) (int, error) {
 }
 
 func (cw *compressWriter) WriteHeader(statusCode int) {
-	if statusCode < 300 {
+	if statusCode < http.StatusMultipleChoices {
 		cw.w.Header().Set("Content-Encoding", "gzip")
 	}
 	cw.w.WriteHeader(statusCode)
@@ -69,26 +71,33 @@ func (cr *compressReader) Close() error {
 func CompressMiddleware(h http.Handler) http.Handler {
 	comperssFuncion := func(w http.ResponseWriter, r *http.Request) {
 		writer := w
-
+		var err error
 		acceptEncoding := r.Header.Get("Accept-Encoding")
 		if strings.Contains(acceptEncoding, "gzip") {
 			cw := newCompressWriter(w)
 			cw.Header().Set("Content-Encoding", "gzip")
 			writer = cw
-			defer cw.Close()
+			defer func() {
+				if errCompressWriter := cw.Close(); errCompressWriter != nil {
+					err = errors.Join(err, fmt.Errorf("close compress writer error: %w", errCompressWriter))
+				}
+			}()
 		}
 
 		contentEncoding := r.Header.Get("Content-Encoding")
 		if strings.Contains(contentEncoding, "gzip") {
 			cr, err := newCompressReader(r.Body)
-			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
+			defer func() {
+				if errCompressReader := cr.Close(); errCompressReader != nil {
+					err = errors.Join(err, fmt.Errorf("close compress reader error: %w", errCompressReader))
+				}
+			}()
 			r.Body = cr
-			defer cr.Close()
 		}
-
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		h.ServeHTTP(writer, r)
 	}
 

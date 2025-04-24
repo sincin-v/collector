@@ -15,7 +15,7 @@ type (
 
 	newResponseWriter struct {
 		http.ResponseWriter
-		responseData *responseData
+		responseData responseData
 	}
 )
 
@@ -36,7 +36,7 @@ func LoggerMiddleware(h http.Handler) http.Handler {
 		url := r.URL.Path
 		method := r.Method
 
-		responseData := &responseData{
+		responseData := responseData{
 			status: 0,
 			size:   0,
 		}

@@ -87,7 +87,11 @@ func (h Handler) GetMetricHandler(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 	res.WriteHeader(http.StatusOK)
-	io.WriteString(res, metric)
+	if _, err := io.WriteString(res, metric); err != nil {
+		logger.Log.Errorf("Could not return metric %s data Error: %s", metricName, err)
+		res.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 }
 
 func (h Handler) GetAllMetricsHandler(res http.ResponseWriter, req *http.Request) {
@@ -104,7 +108,11 @@ func (h Handler) GetAllMetricsHandler(res http.ResponseWriter, req *http.Request
 			logger.Log.Errorf("Cannot get value of metric '%s' . Error: %s", metricName, err)
 			continue
 		}
-		io.WriteString(res, fmt.Sprintf("%s = %s\n", metricName, metricValue))
+		if _, err := io.WriteString(res, fmt.Sprintf("%s = %s\n", metricName, metricValue)); err != nil {
+			logger.Log.Errorf("Could not return metrics data Error: %s", err)
+			res.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	}
 	for metricName := range gaugeMetrics {
 		metricValue, err := h.service.GetMetric("gauge", metricName)
@@ -112,9 +120,13 @@ func (h Handler) GetAllMetricsHandler(res http.ResponseWriter, req *http.Request
 			logger.Log.Errorf("Cannot get value of metric '%s' . Error: %s", metricName, err)
 			continue
 		}
-		io.WriteString(res, fmt.Sprintf("%s = %s\n", metricName, metricValue))
+		if _, err := io.WriteString(res, fmt.Sprintf("%s = %s\n", metricName, metricValue)); err != nil {
+			logger.Log.Errorf("Could not return metrics data Error: %s", err)
+			res.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		res.WriteHeader(http.StatusOK)
 	}
-	res.WriteHeader(http.StatusOK)
 }
 
 func (h Handler) UpdateMetricJSONHandler(res http.ResponseWriter, req *http.Request) {

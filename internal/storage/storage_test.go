@@ -182,7 +182,9 @@ func TestMemStorage_FlushAllMetrics(t *testing.T) {
 			if err := ms.FlushAllMetrics(tt.args.path); (err != nil) != tt.wantErr {
 				t.Errorf("MemStorage.FlushAllMetrics() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			os.Remove("/tmp/test.json")
+			if err := os.Remove("/tmp/test.json"); err != nil {
+				t.Errorf("Could not remove /tmp/test.json Error: %s", err)
+			}
 		})
 	}
 }
@@ -221,7 +223,9 @@ func TestMemStorage_DumpAllMetrics(t *testing.T) {
 
 			metricsMap := map[string]interface{}{"counter": tt.fields.counter, "gauge": tt.fields.gauge}
 			metricsMapJSON, _ := json.MarshalIndent(metricsMap, "", "   ")
-			os.WriteFile("/tmp/test.json", metricsMapJSON, 0666)
+			if err := os.WriteFile("/tmp/test.json", metricsMapJSON, 0666); err != nil {
+				t.Errorf("Could not write tmp file /tmp/test.json Error: %s", err)
+			}
 
 			if err := ms.DumpAllMetrics(tt.args.path); (err != nil) != tt.wantErr {
 				t.Errorf("MemStorage.DumpAllMetrics() error = %v, wantErr %v", err, tt.wantErr)
@@ -244,7 +248,9 @@ func TestMemStorage_DumpAllMetrics(t *testing.T) {
 					t.Errorf("Error: value from MemStorage (%s) are not eq expected (%s)", gaugeMetricValue, tt.want.gauge)
 				}
 			}
-			os.Remove("/tmp/test.json")
+			if err := os.Remove("/tmp/test.json"); err != nil {
+				t.Errorf("Could not remove /tmp/test.json Error: %s", err)
+			}
 		})
 	}
 }
