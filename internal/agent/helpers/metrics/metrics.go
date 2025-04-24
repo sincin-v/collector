@@ -135,15 +135,15 @@ func (c Collector) SendMetrics() {
 		}
 
 		res, err := c.httpClient.SendPostRequest(methodURL, *metricsData)
+		if err != nil {
+			log.Printf("Cannot send request to server to set metric %s", metricName)
+			continue
+		}
 		defer func() {
 			if errBodyClose := res.Body.Close(); errBodyClose != nil {
 				err = errors.Join(err, fmt.Errorf("close body error: %w", errBodyClose))
 			}
 		}()
-		if err != nil {
-			log.Printf("Cannot send request to server to set metric %s", metricName)
-			continue
-		}
 
 	}
 	for metricName := range counterMetrics {
@@ -169,16 +169,15 @@ func (c Collector) SendMetrics() {
 		}
 
 		res, err := c.httpClient.SendPostRequest(methodURL, *metricsData)
+		if err != nil {
+			log.Printf("Cannot send request to server to set metric %s", metricName)
+			continue
+		}
 		defer func() {
 			if errBodyClose := res.Body.Close(); errBodyClose != nil {
 				err = errors.Join(err, fmt.Errorf("close body error: %w", errBodyClose))
 			}
 		}()
-		if err != nil {
-			log.Printf("Cannot send request to server to set metric %s", metricName)
-			continue
-		}
-
 	}
 	log.Printf("Finish send metrics")
 

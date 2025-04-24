@@ -29,20 +29,19 @@ func (h HTTPClient) SendPostRequest(url string, body bytes.Buffer) (*http.Respon
 	request.Header.Set("Accept-Encoding", "gzip")
 	request.Header.Set("Content-Type", "application/json")
 	resp, err := client.Do(request)
+
+	if err != nil {
+		log.Printf("Error to send request %s Error: %s", url, err)
+		return nil, err
+	} else if resp.StatusCode != http.StatusOK {
+		log.Printf("Error to send request %s StatusCode: %d", url, resp.StatusCode)
+		return nil, err
+	}
 	defer func() {
 		if errBodyClose := resp.Body.Close(); errBodyClose != nil {
 			log.Printf("ERROR SEND DATA !!!!")
 			err = errors.Join(err, fmt.Errorf("close body error: %w", errBodyClose))
 		}
 	}()
-
-	if err != nil {
-		log.Printf("Error to send request %s Error: %s", url, err)
-		return nil, err
-	}else if resp.StatusCode != http.StatusOK {
-		log.Printf("Error to send request %s StatusCode: %d", url, resp.StatusCode)
-		return nil, err
-	}
-
 	return resp, nil
 }
