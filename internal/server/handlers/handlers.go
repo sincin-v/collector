@@ -267,5 +267,4 @@ func (h Handler) Ping(res http.ResponseWriter, req *http.Request) {
 		res.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	res.WriteHeader(http.StatusOK)
 }

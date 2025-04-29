@@ -14,6 +14,7 @@ type Config struct {
 	Restore         bool   `env:"RESTORE"`
 	LogLevel        string `env:"LOG_LEVEL" envDefault:"INFO"`
 	DBDns           string `env:"DATABASE_DSN" envDefault:"postgres://user:password@localhost:5432/db_name"`
+
 }
 
 func GetServerConfig() (*Config, error) {
