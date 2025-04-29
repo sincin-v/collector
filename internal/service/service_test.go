@@ -107,18 +107,14 @@ func TestMetricsService_GetAllMetrics(t *testing.T) {
 }
 
 func TestMetricsService_CreateGaugeMetric(t *testing.T) {
-	type fields struct {
-		metricStorage metricStorage
-	}
 	type args struct {
 		metricName string
 		value      float64
 	}
 	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   string
+		name string
+		args args
+		want string
 	}{
 		{
 			name: "positive create gauge metric",
@@ -143,18 +139,14 @@ func TestMetricsService_CreateGaugeMetric(t *testing.T) {
 }
 
 func TestMetricsService_CreateCounterMetric(t *testing.T) {
-	type fields struct {
-		metricStorage metricStorage
-	}
 	type args struct {
 		metricName string
 		value      int64
 	}
 	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   string
+		name string
+		args args
+		want string
 	}{
 
 		{

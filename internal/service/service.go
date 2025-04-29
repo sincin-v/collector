@@ -6,6 +6,8 @@ type metricStorage interface {
 	GetMetric(string, string) (string, error)
 	GetAllCountersMetrics() map[string]int64
 	GetAllGaugeMetrics() map[string]float64
+	FlushAllMetrics(string) error
+	DumpAllMetrics(string) error
 }
 
 type MetricsService struct {
@@ -35,4 +37,12 @@ func (s MetricsService) GetAllMetrics() (map[string]int64, map[string]float64) {
 	counterMetric := s.metricStorage.GetAllCountersMetrics()
 	gaugeMetrics := s.metricStorage.GetAllGaugeMetrics()
 	return counterMetric, gaugeMetrics
+}
+
+func (s MetricsService) FlushAllMetrics(path string) error {
+	return s.metricStorage.FlushAllMetrics(path)
+}
+
+func (s MetricsService) DumpAllMetrics(path string) error {
+	return s.metricStorage.DumpAllMetrics(path)
 }

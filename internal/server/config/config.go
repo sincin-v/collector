@@ -8,13 +8,20 @@ import (
 )
 
 type Config struct {
-	Host string `env:"ADDRESS"`
+	Host            string `env:"ADDRESS"`
+	StoreInterval   int64  `env:"STORE_INTERVAL"`
+	FileStoragePath string `env:"FILE_STORAGE_PATH"`
+	Restore         bool   `env:"RESTORE"`
+	LogLevel        string `env:"LOG_LEVEL" envDefault:"INFO"`
 }
 
 func GetServerConfig() (*Config, error) {
 	cfg := &Config{}
 
 	flag.StringVar(&cfg.Host, "a", "localhost:8080", "Listen host and port")
+	flag.Int64Var(&cfg.StoreInterval, "i", 300, "interval store metrics value")
+	flag.StringVar(&cfg.FileStoragePath, "f", "/tmp/metric_storage", "Path to storage file")
+	flag.BoolVar(&cfg.Restore, "r", true, "Flag of restore collected metrics data")
 	flag.Parse()
 	var err = env.Parse(cfg)
 	if err != nil {

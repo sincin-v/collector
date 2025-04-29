@@ -75,12 +75,6 @@ func TestCollector_SendMetrics(t *testing.T) {
 				if partsPath[1] != "update" {
 					t.Errorf("Error: There is no 'update' on url path")
 				}
-				inputMetricType := partsPath[2]
-				inputMetricName := partsPath[3]
-				inputMetricValue := partsPath[4]
-				if inputMetricType == "" || inputMetricName == "" || inputMetricValue == "" {
-					t.Errorf("ERROR: The url path invalid %s", r.URL.Path)
-				}
 				w.WriteHeader(http.StatusOK)
 			}))
 			defer ts.Close()

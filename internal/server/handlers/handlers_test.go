@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/sincin-v/collector/internal/logger"
 	"github.com/sincin-v/collector/internal/service"
 	"github.com/sincin-v/collector/internal/storage"
 )
@@ -18,9 +19,7 @@ func TestHandler_UpdateMetricHandler(t *testing.T) {
 		httpMethod  string
 	}
 	type want struct {
-		code        int
-		response    string
-		contentType string
+		code int
 	}
 	tests := []struct {
 		name string
@@ -102,6 +101,9 @@ func TestHandler_UpdateMetricHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if err := logger.Initialize("INFO"); err != nil {
+				t.Errorf("Could not initialize logger Error: %s", err)
+			}
 			s := storage.New()
 			h := &Handler{
 				service: service.New(&s),
@@ -119,7 +121,11 @@ func TestHandler_UpdateMetricHandler(t *testing.T) {
 			if tt.want.code != res.StatusCode {
 				t.Errorf("StatusCode (%d) are not %d", res.StatusCode, tt.want.code)
 			}
-			defer res.Body.Close()
+			defer func() {
+				if errBodyClose := res.Body.Close(); errBodyClose != nil {
+					t.Errorf("Close body error %s", errBodyClose)
+				}
+			}()
 
 		})
 	}
@@ -137,9 +143,7 @@ func TestHandler_GetMetricHandler(t *testing.T) {
 		httpMethod string
 	}
 	type want struct {
-		code        int
-		response    string
-		contentType string
+		code int
 	}
 	tests := []struct {
 		name   string
@@ -174,6 +178,9 @@ func TestHandler_GetMetricHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if err := logger.Initialize("INFO"); err != nil {
+				t.Errorf("Could not initialize logger Error: %s", err)
+			}
 			storage := storage.New()
 			service := service.New(&storage)
 			service.CreateCounterMetric(tt.fields.metricName, tt.fields.metricValue)
@@ -192,7 +199,11 @@ func TestHandler_GetMetricHandler(t *testing.T) {
 			if tt.want.code != res.StatusCode {
 				t.Errorf("StatusCode (%d) are not %d", res.StatusCode, tt.want.code)
 			}
-			defer res.Body.Close()
+			defer func() {
+				if errBodyClose := res.Body.Close(); errBodyClose != nil {
+					t.Errorf("Close body error %s", errBodyClose)
+				}
+			}()
 
 		})
 	}
@@ -209,9 +220,7 @@ func TestHandler_GetAllMetricsHandler(t *testing.T) {
 		httpMethod string
 	}
 	type want struct {
-		code        int
-		response    string
-		contentType string
+		code int
 	}
 	tests := []struct {
 		name   string
@@ -243,6 +252,9 @@ func TestHandler_GetAllMetricsHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if err := logger.Initialize("INFO"); err != nil {
+				t.Errorf("Could not initialize logger Error: %s", err)
+			}
 			storage := storage.New()
 			service := service.New(&storage)
 			service.CreateCounterMetric(tt.fields.counterMetricName, tt.fields.counterMetricValue)
@@ -261,7 +273,11 @@ func TestHandler_GetAllMetricsHandler(t *testing.T) {
 			if tt.want.code != res.StatusCode {
 				t.Errorf("StatusCode (%d) are not %d", res.StatusCode, tt.want.code)
 			}
-			defer res.Body.Close()
+			defer func() {
+				if errBodyClose := res.Body.Close(); errBodyClose != nil {
+					t.Errorf("Close body error %s", errBodyClose)
+				}
+			}()
 		})
 	}
 }
