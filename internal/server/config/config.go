@@ -13,6 +13,7 @@ type Config struct {
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	Restore         bool   `env:"RESTORE"`
 	LogLevel        string `env:"LOG_LEVEL" envDefault:"INFO"`
+	DBDns           string `env:"DATABASE_DSN" envDefault:"postgres://user:password@localhost:5432/db_name"`
 }
 
 func GetServerConfig() (*Config, error) {
@@ -22,6 +23,7 @@ func GetServerConfig() (*Config, error) {
 	flag.Int64Var(&cfg.StoreInterval, "i", 300, "interval store metrics value")
 	flag.StringVar(&cfg.FileStoragePath, "f", "/tmp/metric_storage", "Path to storage file")
 	flag.BoolVar(&cfg.Restore, "r", true, "Flag of restore collected metrics data")
+	flag.StringVar(&cfg.DBDns, "d", "postgres://user:password@localhost:5432/db_name", "DNS fo connect to DB")
 	flag.Parse()
 	var err = env.Parse(cfg)
 	if err != nil {

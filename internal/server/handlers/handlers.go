@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -18,13 +19,21 @@ type MetricsService interface {
 	GetAllMetrics() (map[string]int64, map[string]float64)
 }
 
-type Handler struct {
-	service MetricsService
+type DBClient interface {
+	Ping(ctx context.Context) (bool, error)
 }
 
-func New(s MetricsService) Handler {
+type Handler struct {
+	service  MetricsService
+	dbClient DBClient
+	ctx      context.Context
+}
+
+func New(s MetricsService, db DBClient, ctx context.Context) Handler {
 	return Handler{
-		service: s,
+		service:  s,
+		dbClient: db,
+		ctx:      ctx,
 	}
 }
 
@@ -246,5 +255,17 @@ func (h Handler) GetMetricJSONHandler(res http.ResponseWriter, req *http.Request
 	if err := encoder.Encode(resp); err != nil {
 		res.WriteHeader(http.StatusBadRequest)
 	}
+}
 
+func (h Handler) Ping(res http.ResponseWriter, req *http.Request) {
+	result, err := h.dbClient.Ping(h.ctx)
+	if err != nil {
+		logger.Log.Error("Ping Error: %s", err)
+	}
+	if !result {
+		logger.Log.Error("There is no connect to DB, ping:false")
+		res.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	res.WriteHeader(http.StatusOK)
 }

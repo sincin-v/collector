@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/sincin-v/collector/internal/logger"
+	"github.com/sincin-v/collector/internal/server/clients/db"
 	"github.com/sincin-v/collector/internal/server/collector"
 	"github.com/sincin-v/collector/internal/server/config"
 	"github.com/sincin-v/collector/internal/server/router"
@@ -45,7 +46,12 @@ func main() {
 		}
 	}()
 
-	serverRouter := router.CreateRouter(&metricService)
+	dbClient, err := db.New(serverConfig.DBDns)
+	if err != nil {
+		logger.Log.Error("Errorconnect to DB %s Error: %s", serverConfig.DBDns, err)
+	}
+
+	serverRouter := router.CreateRouter(&metricService, dbClient)
 
 	httpErr := http.ListenAndServe(serverConfig.Host, serverRouter)
 	if httpErr != nil {
