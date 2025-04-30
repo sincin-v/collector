@@ -25,7 +25,7 @@ func TestCollector_CollectMetrics(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			st := storage.New()
+			st := storage.NewMemStorage()
 			s := service.New(&st)
 
 			hs := rest.New("localhost:8888")
@@ -78,9 +78,9 @@ func TestCollector_SendMetrics(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			}))
 			defer ts.Close()
-			st := storage.New()
-			st.CreateCounterMetric(tt.fields.countMetricName, tt.fields.countMetricValue)
-			st.CreateGaugeMetric(tt.fields.gaugeMetricName, tt.fields.gaugeMetricValue)
+			st := storage.NewMemStorage()
+			st.UpdateCounterMetric(tt.fields.countMetricName, tt.fields.countMetricValue)
+			st.UpdateGaugeMetric(tt.fields.gaugeMetricName, tt.fields.gaugeMetricValue)
 			s := service.New(&st)
 
 			hs := rest.New(ts.URL)

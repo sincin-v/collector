@@ -1,10 +1,18 @@
 package collector
 
-import "time"
+import (
+	"encoding/json"
+	"os"
+	"time"
+
+	"github.com/sincin-v/collector/internal/models"
+)
 
 type MetricsService interface {
-	FlushAllMetrics(string) error
-	DumpAllMetrics(string) error
+	GetAllCountersMetrics() map[string]int64
+	GetAllGaugeMetrics() map[string]float64
+	UpdateCounterMetric(string, int64)
+	UpdateGaugeMetric(string, float64)
 }
 
 type MetricCollector struct {
@@ -22,7 +30,17 @@ func New(s MetricsService, path string) MetricCollector {
 func (mc MetricCollector) SaveMetrics(interval int) error {
 	for {
 		time.Sleep(time.Duration(interval) * time.Second)
-		err := mc.service.FlushAllMetrics(mc.path)
+
+		metricsMap := map[string]interface{}{
+			"counter": mc.service.GetAllCountersMetrics(),
+			"gauge":   mc.service.GetAllGaugeMetrics(),
+		}
+		resultData, errJSON := json.MarshalIndent(metricsMap, "", "   ")
+		if errJSON != nil {
+			return errJSON
+		}
+
+		err := os.WriteFile(mc.path, resultData, 0666)
 		if err != nil {
 			return err
 		}
@@ -31,5 +49,24 @@ func (mc MetricCollector) SaveMetrics(interval int) error {
 }
 
 func (mc MetricCollector) RestoreMetrics() error {
-	return mc.service.DumpAllMetrics(mc.path)
+
+	savedData, errOpenFile := os.ReadFile(mc.path)
+	if errOpenFile != nil {
+		return errOpenFile
+	}
+	metricsData := models.RestoredDataModel{}
+	if err := json.Unmarshal(savedData, &metricsData); err != nil {
+		return err
+	}
+
+	for counterMetric := range metricsData.Counter {
+		mc.service.UpdateCounterMetric(counterMetric, metricsData.Counter[counterMetric])
+	}
+
+	for gaugeMetric := range metricsData.Gauge {
+		mc.service.UpdateGaugeMetric(gaugeMetric, metricsData.Gauge[gaugeMetric])
+	}
+
+	return nil
+
 }

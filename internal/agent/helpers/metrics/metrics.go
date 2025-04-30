@@ -21,8 +21,8 @@ type MemMetrics struct {
 }
 
 type MetricsService interface {
-	CreateCounterMetric(string, int64)
-	CreateGaugeMetric(string, float64)
+	UpdateCounterMetric(string, int64)
+	UpdateGaugeMetric(string, float64)
 	GetMetric(string, string) (string, error)
 	GetAllMetrics() (map[string]int64, map[string]float64)
 }
@@ -97,11 +97,11 @@ func (c Collector) CollectMetrics() {
 	for metricName := range c.memStatsMetric {
 		metricValue := c.memStatsMetric[metricName]
 		log.Printf("Filed %s, value %v", metricName, metricValue)
-		c.service.CreateGaugeMetric(metricName, metricValue)
+		c.service.UpdateGaugeMetric(metricName, metricValue)
 	}
 
-	c.service.CreateCounterMetric("PollCount", 1)
-	c.service.CreateGaugeMetric("RandomValue", rand.Float64())
+	c.service.UpdateCounterMetric("PollCount", 1)
+	c.service.UpdateGaugeMetric("RandomValue", rand.Float64())
 
 	log.Printf("Finish collect metrics")
 }

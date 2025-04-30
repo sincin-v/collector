@@ -23,7 +23,7 @@ func main() {
 	}
 	logger.Log.Info("Start agent work")
 	logger.Log.Info("Send metrics to %s", agentConfig.ServerHost)
-	memStorage := storage.New()
+	memStorage := storage.NewMemStorage()
 	service := service.New(&memStorage)
 	hc := rest.New(agentConfig.ServerHost)
 	metricsCollector := metrics.New(&service, hc)

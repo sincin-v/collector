@@ -39,11 +39,11 @@ func TestMetricsService_GetMetric(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			st := storage.New()
+			st := storage.NewMemStorage()
 			s := MetricsService{
 				metricStorage: &st,
 			}
-			s.CreateCounterMetric(tt.fields.metricName, tt.fields.metricValue)
+			s.UpdateCounterMetric(tt.fields.metricName, tt.fields.metricValue)
 			got, err := s.GetMetric(tt.args.metricType, tt.args.metricName)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("MetricsService.GetMetric() error = %v, wantErr %v", err, tt.wantErr)
@@ -79,15 +79,15 @@ func TestMetricsService_GetAllMetrics(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			st := storage.New()
+			st := storage.NewMemStorage()
 			s := MetricsService{
 				metricStorage: &st,
 			}
 			for gaugeMetricName := range tt.fields.gaugeMetrics {
-				s.CreateGaugeMetric(gaugeMetricName, tt.fields.gaugeMetrics[gaugeMetricName])
+				s.UpdateGaugeMetric(gaugeMetricName, tt.fields.gaugeMetrics[gaugeMetricName])
 			}
 			for counterMetricName := range tt.fields.counterMetrics {
-				s.CreateCounterMetric(counterMetricName, tt.fields.counterMetrics[counterMetricName])
+				s.UpdateCounterMetric(counterMetricName, tt.fields.counterMetrics[counterMetricName])
 			}
 
 			got, got1 := s.GetAllMetrics()
@@ -106,7 +106,7 @@ func TestMetricsService_GetAllMetrics(t *testing.T) {
 	}
 }
 
-func TestMetricsService_CreateGaugeMetric(t *testing.T) {
+func TestMetricsService_UpdateGaugeMetric(t *testing.T) {
 	type args struct {
 		metricName string
 		value      float64
@@ -125,11 +125,11 @@ func TestMetricsService_CreateGaugeMetric(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			st := storage.New()
+			st := storage.NewMemStorage()
 			s := MetricsService{
 				metricStorage: &st,
 			}
-			s.CreateGaugeMetric(tt.args.metricName, tt.args.value)
+			s.UpdateGaugeMetric(tt.args.metricName, tt.args.value)
 			got, _ := s.GetMetric("gauge", tt.args.metricName)
 			if got != tt.want {
 				t.Errorf("MetricsService.GetMetric() = %v, want %v", got, tt.want)
@@ -138,7 +138,7 @@ func TestMetricsService_CreateGaugeMetric(t *testing.T) {
 	}
 }
 
-func TestMetricsService_CreateCounterMetric(t *testing.T) {
+func TestMetricsService_UpdateCounterMetric(t *testing.T) {
 	type args struct {
 		metricName string
 		value      int64
@@ -157,11 +157,11 @@ func TestMetricsService_CreateCounterMetric(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			st := storage.New()
+			st := storage.NewMemStorage()
 			s := MetricsService{
 				metricStorage: &st,
 			}
-			s.CreateCounterMetric(tt.args.metricName, tt.args.value)
+			s.UpdateCounterMetric(tt.args.metricName, tt.args.value)
 			got, _ := s.GetMetric("counter", tt.args.metricName)
 			if got != tt.want {
 				t.Errorf("MetricsService.GetMetric() = %v, want %v", got, tt.want)

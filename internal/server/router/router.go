@@ -11,9 +11,13 @@ import (
 	"github.com/sincin-v/collector/internal/service"
 )
 
-func CreateRouter(service *service.MetricsService, databaseClient *db.DBClient) *chi.Mux {
+func CreateRouter(service *service.MetricsService, databaseClient *db.DBClient) (*chi.Mux, error) {
 	baseCtx := context.Background()
-	h := handlers.New(service, databaseClient, baseCtx)
+
+	h, err := handlers.New(baseCtx, service, databaseClient)
+	if err != nil {
+		return nil, err
+	}
 	router := chi.NewRouter()
 
 	router.Use(logMw.LoggerMiddleware)
@@ -25,5 +29,5 @@ func CreateRouter(service *service.MetricsService, databaseClient *db.DBClient) 
 	router.Get("/ping", h.Ping)
 	router.Get("/", h.GetAllMetricsHandler)
 
-	return router
+	return router, nil
 }

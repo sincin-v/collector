@@ -1,17 +1,10 @@
 package storage
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
 	"strconv"
 	"sync"
 )
-
-type RestoredDataModel struct {
-	Counter map[string]int64   `json:"counter"`
-	Gauge   map[string]float64 `json:"gauge"`
-}
 
 type MemStorage struct {
 	mu      sync.RWMutex
@@ -19,20 +12,20 @@ type MemStorage struct {
 	counter map[string]int64
 }
 
-func New() MemStorage {
+func NewMemStorage() MemStorage {
 	return MemStorage{
 		gauge:   map[string]float64{},
 		counter: map[string]int64{},
 	}
 }
 
-func (ms *MemStorage) CreateGaugeMetric(name string, value float64) {
+func (ms *MemStorage) UpdateGaugeMetric(name string, value float64) {
 	ms.mu.Lock()
 	ms.gauge[name] = value
 	ms.mu.Unlock()
 }
 
-func (ms *MemStorage) CreateCounterMetric(name string, value int64) {
+func (ms *MemStorage) UpdateCounterMetric(name string, value int64) {
 	ms.mu.Lock()
 	defer ms.mu.Unlock()
 	_, ok := ms.counter[name]
@@ -71,32 +64,4 @@ func (ms *MemStorage) GetAllCountersMetrics() map[string]int64 {
 
 func (ms *MemStorage) GetAllGaugeMetrics() map[string]float64 {
 	return ms.gauge
-}
-
-func (ms *MemStorage) FlushAllMetrics(path string) error {
-
-	metricsMap := map[string]interface{}{"counter": ms.counter, "gauge": ms.gauge}
-
-	resultData, errJSON := json.MarshalIndent(metricsMap, "", "   ")
-	if errJSON != nil {
-		return errJSON
-	}
-	return os.WriteFile(path, resultData, 0666)
-}
-
-func (ms *MemStorage) DumpAllMetrics(path string) error {
-
-	savedData, errOpenFile := os.ReadFile(path)
-	if errOpenFile != nil {
-		return errOpenFile
-	}
-	metricsData := RestoredDataModel{}
-	if err := json.Unmarshal(savedData, &metricsData); err != nil {
-		return err
-	}
-
-	ms.counter = metricsData.Counter
-	ms.gauge = metricsData.Gauge
-
-	return nil
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/sincin-v/collector/internal/logger"
@@ -26,32 +27,53 @@ func main() {
 
 	logger.Log.Infof("Start server work on %s", serverConfig.Host)
 
-	memStorage := storage.New()
-	metricService := service.New(&memStorage)
-	metricCollector := collector.New(metricService, serverConfig.FileStoragePath)
+	var baseCtx = context.Background()
 
-	if serverConfig.Restore {
-		err := metricCollector.RestoreMetrics()
+	var metricService service.MetricsService
+	var dbClient *db.DBClient
+	var err error
+
+	if serverConfig.DBDns != "" {
+		dbClient, err = db.New(baseCtx, serverConfig.DBDns)
 		if err != nil {
-			logger.Log.Warnf("Cannot restore metrics from %s", serverConfig.FileStoragePath)
+			logger.Log.Panic("Error connect to DB %s Error: %s", serverConfig.DBDns, err)
 		}
+
+		storage, errCreateDBStorage := storage.NewDBStorage(baseCtx, *dbClient)
+		if errCreateDBStorage != nil {
+			logger.Log.Panic("Error create DB storage %s Error: %s", serverConfig.DBDns, errCreateDBStorage)
+		}
+		metricService = service.New(storage)
+
+		defer dbClient.Close()
+	} else {
+		storage := storage.NewMemStorage()
+		metricService = service.New(&storage)
+
+		metricCollector := collector.New(metricService, serverConfig.FileStoragePath)
+
+		if serverConfig.Restore {
+			err := metricCollector.RestoreMetrics()
+			if err != nil {
+				logger.Log.Warnf("Cannot restore metrics from %s", serverConfig.FileStoragePath)
+			}
+		}
+
+		var errSaveMetric error
+
+		go func() {
+			errSaveMetric = metricCollector.SaveMetrics(int(serverConfig.StoreInterval))
+			if errSaveMetric != nil {
+				logger.Log.Error("Error save metric: %s", errSaveMetric)
+			}
+		}()
 	}
 
-	var errSaveMetric error
+	serverRouter, errCreateRouter := router.CreateRouter(&metricService, dbClient)
 
-	go func() {
-		errSaveMetric = metricCollector.SaveMetrics(int(serverConfig.StoreInterval))
-		if errSaveMetric != nil {
-			logger.Log.Error("Error save metric: %s", errSaveMetric)
-		}
-	}()
-
-	dbClient, err := db.New(serverConfig.DBDns)
-	if err != nil {
-		logger.Log.Error("Errorconnect to DB %s Error: %s", serverConfig.DBDns, err)
+	if errCreateRouter != nil {
+		panic(errCreateRouter)
 	}
-
-	serverRouter := router.CreateRouter(&metricService, dbClient)
 
 	httpErr := http.ListenAndServe(serverConfig.Host, serverRouter)
 	if httpErr != nil {

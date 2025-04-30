@@ -1,13 +1,11 @@
 package service
 
 type metricStorage interface {
-	CreateCounterMetric(string, int64)
-	CreateGaugeMetric(string, float64)
+	UpdateCounterMetric(string, int64)
+	UpdateGaugeMetric(string, float64)
 	GetMetric(string, string) (string, error)
 	GetAllCountersMetrics() map[string]int64
 	GetAllGaugeMetrics() map[string]float64
-	FlushAllMetrics(string) error
-	DumpAllMetrics(string) error
 }
 
 type MetricsService struct {
@@ -20,12 +18,12 @@ func New(s metricStorage) MetricsService {
 	}
 }
 
-func (s MetricsService) CreateGaugeMetric(metricName string, value float64) {
-	s.metricStorage.CreateGaugeMetric(metricName, value)
+func (s MetricsService) UpdateGaugeMetric(metricName string, value float64) {
+	s.metricStorage.UpdateGaugeMetric(metricName, value)
 }
 
-func (s MetricsService) CreateCounterMetric(metricName string, value int64) {
-	s.metricStorage.CreateCounterMetric(metricName, value)
+func (s MetricsService) UpdateCounterMetric(metricName string, value int64) {
+	s.metricStorage.UpdateCounterMetric(metricName, value)
 }
 
 func (s MetricsService) GetMetric(metricType string, metricName string) (string, error) {
@@ -39,10 +37,10 @@ func (s MetricsService) GetAllMetrics() (map[string]int64, map[string]float64) {
 	return counterMetric, gaugeMetrics
 }
 
-func (s MetricsService) FlushAllMetrics(path string) error {
-	return s.metricStorage.FlushAllMetrics(path)
+func (s MetricsService) GetAllCountersMetrics() map[string]int64 {
+	return s.metricStorage.GetAllCountersMetrics()
 }
 
-func (s MetricsService) DumpAllMetrics(path string) error {
-	return s.metricStorage.DumpAllMetrics(path)
+func (s MetricsService) GetAllGaugeMetrics() map[string]float64 {
+	return s.metricStorage.GetAllGaugeMetrics()
 }

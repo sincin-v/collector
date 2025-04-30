@@ -104,7 +104,7 @@ func TestHandler_UpdateMetricHandler(t *testing.T) {
 			if err := logger.Initialize("INFO"); err != nil {
 				t.Errorf("Could not initialize logger Error: %s", err)
 			}
-			s := storage.New()
+			s := storage.NewMemStorage()
 			h := &Handler{
 				service: service.New(&s),
 			}
@@ -181,9 +181,9 @@ func TestHandler_GetMetricHandler(t *testing.T) {
 			if err := logger.Initialize("INFO"); err != nil {
 				t.Errorf("Could not initialize logger Error: %s", err)
 			}
-			storage := storage.New()
+			storage := storage.NewMemStorage()
 			service := service.New(&storage)
-			service.CreateCounterMetric(tt.fields.metricName, tt.fields.metricValue)
+			service.UpdateCounterMetric(tt.fields.metricName, tt.fields.metricValue)
 			h := &Handler{
 				service: service,
 			}
@@ -255,11 +255,10 @@ func TestHandler_GetAllMetricsHandler(t *testing.T) {
 			if err := logger.Initialize("INFO"); err != nil {
 				t.Errorf("Could not initialize logger Error: %s", err)
 			}
-			storage := storage.New()
+			storage := storage.NewMemStorage()
 			service := service.New(&storage)
-			service.CreateCounterMetric(tt.fields.counterMetricName, tt.fields.counterMetricValue)
-			service.CreateGaugeMetric(tt.fields.gaugeMetricName, tt.fields.gaugeMetricValue)
-			// service.CreateMetric(tt.fields.metricType, tt.fields.metricName, tt.fields.metricValue)
+			service.UpdateCounterMetric(tt.fields.counterMetricName, tt.fields.counterMetricValue)
+			service.UpdateGaugeMetric(tt.fields.gaugeMetricName, tt.fields.gaugeMetricValue)
 			h := &Handler{
 				service: service,
 			}
