@@ -31,7 +31,7 @@ func (d *DBClient) Execute(ctx context.Context, query string, args ...any) error
 	_, err = d.db.ExecContext(ctx, query, args...)
 
 	if err != nil {
-		logger.Log.Error("[DBClient] Could execute query %s. Error: %s", query, err)
+		logger.Log.Errorf("[DBClient] Could execute query %s. Error: %s", query, err)
 		return err
 	}
 	return nil
@@ -41,7 +41,7 @@ func (d *DBClient) RowQuery(ctx context.Context, query string, args ...any) (*sq
 	resRow := d.db.QueryRowContext(ctx, query, args...)
 	var err = resRow.Err()
 	if err != nil {
-		logger.Log.Error("[DBClient] Could execute query %s. Error: %s", query, err)
+		logger.Log.Errorf("[DBClient] Could execute query %s. Error: %s", query, err)
 		return nil, err
 	}
 	return resRow, nil
@@ -50,10 +50,19 @@ func (d *DBClient) RowQuery(ctx context.Context, query string, args ...any) (*sq
 func (d *DBClient) Query(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
 	resRows, err := d.db.QueryContext(ctx, query, args...)
 	if err != nil {
-		logger.Log.Error("[DBClient] Could execute query %s. Error: %s", query, err)
+		logger.Log.Errorf("[DBClient] Could execute query %s. Error: %s", query, err)
 		return nil, err
 	}
 	return resRows, nil
+}
+
+func (d *DBClient) BeginTx(ctx context.Context) (*sql.Tx, error) {
+	tx, err := d.db.BeginTx(ctx, nil)
+	if err != nil {
+		logger.Log.Error("[DBClient] Cannot start Tx. Error: %s", err)
+		return nil, err
+	}
+	return tx, nil
 }
 
 func (d *DBClient) Close() {

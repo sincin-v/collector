@@ -35,7 +35,10 @@ func TestMetricStorage_UpdateGaugeMetric(t *testing.T) {
 				gauge:   tt.fields.gauge,
 				counter: tt.fields.counter,
 			}
-			ms.UpdateGaugeMetric(tt.args.n, tt.args.v)
+			err := ms.UpdateGaugeMetric(tt.args.n, tt.args.v)
+			if err != nil {
+				t.Errorf("MetricsService.UpdateGaugeMetric()  Error: %s", err)
+			}
 			if got, _ := ms.GetMetric("gauge", tt.args.n); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("MetricStorage.UpdateGaugeMetric() = %v, want %v", got, tt.want)
 			}
@@ -77,7 +80,10 @@ func TestMetricStorage_UpdateCounterMetric(t *testing.T) {
 				gauge:   tt.fields.gauge,
 				counter: tt.fields.counter,
 			}
-			ms.UpdateCounterMetric(tt.args.n, tt.args.v)
+			err := ms.UpdateCounterMetric(tt.args.n, tt.args.v)
+			if err != nil {
+				t.Errorf("MetricsService.UpdateCounterMetric()  Error: %s", err)
+			}
 			if got, _ := ms.GetMetric("counter", tt.args.n); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("MetricStorage.UpdateCounterMetric() = %v, want %v", got, tt.want)
 			}

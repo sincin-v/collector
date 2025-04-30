@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strconv"
 	"sync"
+
+	"github.com/sincin-v/collector/internal/models"
 )
 
 type MemStorage struct {
@@ -18,23 +20,45 @@ func NewMemStorage() MemStorage {
 		counter: map[string]int64{},
 	}
 }
+func (ms *MemStorage) UpdateMetricsByBatch(metrics []models.Metrics) error {
 
-func (ms *MemStorage) UpdateGaugeMetric(name string, value float64) {
+	ms.mu.Lock()
+	defer ms.mu.Unlock()
+	for _, metricObj := range metrics {
+		switch metricObj.MType {
+		case "gauge":
+			ms.gauge[metricObj.ID] = *metricObj.Value
+		case "counter":
+			_, ok := ms.counter[metricObj.ID]
+			if !ok {
+				ms.counter[metricObj.ID] = *metricObj.Delta
+				continue
+			}
+			ms.counter[metricObj.ID] += *metricObj.Delta
+		default:
+			continue
+		}
+	}
+	return nil
+}
+
+func (ms *MemStorage) UpdateGaugeMetric(name string, value float64) error {
 	ms.mu.Lock()
 	ms.gauge[name] = value
 	ms.mu.Unlock()
+	return nil
 }
 
-func (ms *MemStorage) UpdateCounterMetric(name string, value int64) {
+func (ms *MemStorage) UpdateCounterMetric(name string, value int64) error {
 	ms.mu.Lock()
 	defer ms.mu.Unlock()
 	_, ok := ms.counter[name]
 	if !ok {
 		ms.counter[name] = value
-		return
+		return nil
 	}
 	ms.counter[name] += value
-
+	return nil
 }
 
 func (ms *MemStorage) GetMetric(metricType string, metricName string) (string, error) {

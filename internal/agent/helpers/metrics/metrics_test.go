@@ -79,8 +79,8 @@ func TestCollector_SendMetrics(t *testing.T) {
 			}))
 			defer ts.Close()
 			st := storage.NewMemStorage()
-			st.UpdateCounterMetric(tt.fields.countMetricName, tt.fields.countMetricValue)
-			st.UpdateGaugeMetric(tt.fields.gaugeMetricName, tt.fields.gaugeMetricValue)
+			_ = st.UpdateCounterMetric(tt.fields.countMetricName, tt.fields.countMetricValue)
+			_ = st.UpdateGaugeMetric(tt.fields.gaugeMetricName, tt.fields.gaugeMetricValue)
 			s := service.New(&st)
 
 			hs := rest.New(ts.URL)

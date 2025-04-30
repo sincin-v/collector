@@ -1,11 +1,14 @@
 package service
 
+import "github.com/sincin-v/collector/internal/models"
+
 type metricStorage interface {
-	UpdateCounterMetric(string, int64)
-	UpdateGaugeMetric(string, float64)
+	UpdateCounterMetric(string, int64) error
+	UpdateGaugeMetric(string, float64) error
 	GetMetric(string, string) (string, error)
 	GetAllCountersMetrics() map[string]int64
 	GetAllGaugeMetrics() map[string]float64
+	UpdateMetricsByBatch([]models.Metrics) error
 }
 
 type MetricsService struct {
@@ -18,12 +21,16 @@ func New(s metricStorage) MetricsService {
 	}
 }
 
-func (s MetricsService) UpdateGaugeMetric(metricName string, value float64) {
-	s.metricStorage.UpdateGaugeMetric(metricName, value)
+func (s MetricsService) UpdateMetricsByBatch(metrics []models.Metrics) error {
+	return s.metricStorage.UpdateMetricsByBatch(metrics)
 }
 
-func (s MetricsService) UpdateCounterMetric(metricName string, value int64) {
-	s.metricStorage.UpdateCounterMetric(metricName, value)
+func (s MetricsService) UpdateGaugeMetric(metricName string, value float64) error {
+	return s.metricStorage.UpdateGaugeMetric(metricName, value)
+}
+
+func (s MetricsService) UpdateCounterMetric(metricName string, value int64) error {
+	return s.metricStorage.UpdateCounterMetric(metricName, value)
 }
 
 func (s MetricsService) GetMetric(metricType string, metricName string) (string, error) {

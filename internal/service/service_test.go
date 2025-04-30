@@ -43,7 +43,7 @@ func TestMetricsService_GetMetric(t *testing.T) {
 			s := MetricsService{
 				metricStorage: &st,
 			}
-			s.UpdateCounterMetric(tt.fields.metricName, tt.fields.metricValue)
+			_ = s.UpdateCounterMetric(tt.fields.metricName, tt.fields.metricValue)
 			got, err := s.GetMetric(tt.args.metricType, tt.args.metricName)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("MetricsService.GetMetric() error = %v, wantErr %v", err, tt.wantErr)
@@ -84,10 +84,10 @@ func TestMetricsService_GetAllMetrics(t *testing.T) {
 				metricStorage: &st,
 			}
 			for gaugeMetricName := range tt.fields.gaugeMetrics {
-				s.UpdateGaugeMetric(gaugeMetricName, tt.fields.gaugeMetrics[gaugeMetricName])
+				_ = s.UpdateGaugeMetric(gaugeMetricName, tt.fields.gaugeMetrics[gaugeMetricName])
 			}
 			for counterMetricName := range tt.fields.counterMetrics {
-				s.UpdateCounterMetric(counterMetricName, tt.fields.counterMetrics[counterMetricName])
+				_ = s.UpdateCounterMetric(counterMetricName, tt.fields.counterMetrics[counterMetricName])
 			}
 
 			got, got1 := s.GetAllMetrics()
@@ -129,7 +129,10 @@ func TestMetricsService_UpdateGaugeMetric(t *testing.T) {
 			s := MetricsService{
 				metricStorage: &st,
 			}
-			s.UpdateGaugeMetric(tt.args.metricName, tt.args.value)
+			err := s.UpdateGaugeMetric(tt.args.metricName, tt.args.value)
+			if err != nil {
+				t.Errorf("MetricsService.UpdateGaugeMetric()  Error: %s", err)
+			}
 			got, _ := s.GetMetric("gauge", tt.args.metricName)
 			if got != tt.want {
 				t.Errorf("MetricsService.GetMetric() = %v, want %v", got, tt.want)
@@ -161,7 +164,10 @@ func TestMetricsService_UpdateCounterMetric(t *testing.T) {
 			s := MetricsService{
 				metricStorage: &st,
 			}
-			s.UpdateCounterMetric(tt.args.metricName, tt.args.value)
+			err := s.UpdateCounterMetric(tt.args.metricName, tt.args.value)
+			if err != nil {
+				t.Errorf("MetricsService.UpdateCounterMetric()  Error: %s", err)
+			}
 			got, _ := s.GetMetric("counter", tt.args.metricName)
 			if got != tt.want {
 				t.Errorf("MetricsService.GetMetric() = %v, want %v", got, tt.want)

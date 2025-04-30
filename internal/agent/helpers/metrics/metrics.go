@@ -21,8 +21,8 @@ type MemMetrics struct {
 }
 
 type MetricsService interface {
-	UpdateCounterMetric(string, int64)
-	UpdateGaugeMetric(string, float64)
+	UpdateCounterMetric(string, int64) error
+	UpdateGaugeMetric(string, float64) error
 	GetMetric(string, string) (string, error)
 	GetAllMetrics() (map[string]int64, map[string]float64)
 }
@@ -51,7 +51,8 @@ func (c Collector) StartCollectMetrics(pollInterval time.Duration) {
 func (c Collector) StartSendMetrics(reportInterval time.Duration) {
 	for {
 		time.Sleep(reportInterval)
-		c.SendMetrics()
+		// c.SendMetrics()
+		c.SendMetricsJSON()
 	}
 }
 
@@ -93,17 +94,81 @@ func (c Collector) CollectMetrics() {
 
 	log.Printf("Start collect metrics")
 	c.GetMetricsFromMemStats()
-
+	var err error
 	for metricName := range c.memStatsMetric {
 		metricValue := c.memStatsMetric[metricName]
 		log.Printf("Filed %s, value %v", metricName, metricValue)
-		c.service.UpdateGaugeMetric(metricName, metricValue)
+		if errLoopMetric := c.service.UpdateGaugeMetric(metricName, metricValue); errLoopMetric != nil {
+			err = errors.Join(err, fmt.Errorf("update metric %s error: %w", metricName, errLoopMetric))
+		}
+
 	}
 
-	c.service.UpdateCounterMetric("PollCount", 1)
-	c.service.UpdateGaugeMetric("RandomValue", rand.Float64())
-
+	if errCounterMetric := c.service.UpdateCounterMetric("PollCount", 1); errCounterMetric != nil {
+		err = errors.Join(err, fmt.Errorf("update metric PollCount error: %w", errCounterMetric))
+	}
+	if errGaugeMetric := c.service.UpdateGaugeMetric("RandomValue", rand.Float64()); errGaugeMetric != nil {
+		err = errors.Join(err, fmt.Errorf("update metric RandomValue error: %w", errGaugeMetric))
+	}
+	if err != nil {
+		log.Printf("Update finish with error:  %s", err)
+	}
 	log.Printf("Finish collect metrics")
+}
+
+func (c Collector) SendMetricsJSON() {
+	log.Printf("Start send metrics")
+	counterMetrics, gaugeMetrics := c.service.GetAllMetrics()
+	var methodURL = "/updates/"
+	var metricsArr []models.Metrics
+
+	for metricName := range gaugeMetrics {
+		metricValue := gaugeMetrics[metricName]
+
+		metricObj := models.Metrics{
+			ID:    metricName,
+			MType: "gauge",
+			Value: &metricValue,
+		}
+		metricsArr = append(metricsArr, metricObj)
+	}
+	for metricName := range counterMetrics {
+		metricValue := counterMetrics[metricName]
+
+		metricObj := models.Metrics{
+			ID:    metricName,
+			MType: "counter",
+			Delta: &metricValue,
+		}
+		metricsArr = append(metricsArr, metricObj)
+	}
+
+	sendObj := metricsArr // models.MetricsArray{Metrics: metricsArr}
+
+	var buf bytes.Buffer
+	encoder := json.NewEncoder(&buf)
+	errEncode := encoder.Encode(sendObj)
+	if errEncode != nil {
+		log.Printf("Cannot encode data err: %s", errEncode)
+		return
+	}
+
+	sendData, errCompress := compress.Compress(buf)
+	if errCompress != nil {
+		log.Printf("Cannot compress data of metrics")
+		return
+	}
+	log.Printf("SEND DATA")
+	res, err := c.httpClient.SendPostRequest(methodURL, *sendData)
+	if err != nil {
+		log.Printf("Cannot send request to server to set metrics Error: %s", err)
+		return
+	}
+	defer func() {
+		if errBodyClose := res.Body.Close(); errBodyClose != nil {
+			err = errors.Join(err, fmt.Errorf("close body error: %w", errBodyClose))
+		}
+	}()
 }
 
 func (c Collector) SendMetrics() {

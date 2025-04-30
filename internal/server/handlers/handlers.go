@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,10 +15,11 @@ import (
 )
 
 type MetricsService interface {
-	UpdateCounterMetric(string, int64)
-	UpdateGaugeMetric(string, float64)
+	UpdateCounterMetric(string, int64) error
+	UpdateGaugeMetric(string, float64) error
 	GetMetric(string, string) (string, error)
 	GetAllMetrics() (map[string]int64, map[string]float64)
+	UpdateMetricsByBatch([]models.Metrics) error
 }
 
 type DBClient interface {
@@ -50,29 +52,39 @@ func (h Handler) UpdateMetricHandler(res http.ResponseWriter, req *http.Request)
 	metricValue := req.PathValue("metricValue")
 	logger.Log.Infof("[Handler] Method: %s Url: %s, metricType: %s, metricName: %s, metricValue: %s", req.Method, req.URL.Path, metricType, metricName, metricValue)
 
+	var err error
+
 	switch metricType {
 	case "gauge":
-		value, err := strconv.ParseFloat(metricValue, 64)
-		if err != nil {
+		value, errParseFloat := strconv.ParseFloat(metricValue, 64)
+		if errParseFloat != nil {
 			logger.Log.Errorf("[Handler] Invalid value (%s) for type (%s)", metricValue, metricType)
 			res.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		h.service.UpdateGaugeMetric(metricName, value)
+		if errUpGaugeMetric := h.service.UpdateGaugeMetric(metricName, value); errUpGaugeMetric != nil {
+			err = errors.Join(err, fmt.Errorf("cannot update metric %s, error: %S", metricName, errUpGaugeMetric))
+		}
 	case "counter":
-		value, err := strconv.ParseInt(metricValue, 10, 64)
-		if err != nil {
+		value, errParseInt := strconv.ParseInt(metricValue, 10, 64)
+		if errParseInt != nil {
 			logger.Log.Errorf("[Handler] Invalid value (%s) for type (%s)", metricValue, metricType)
 			res.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		h.service.UpdateCounterMetric(metricName, value)
+		if errUpCouterMetric := h.service.UpdateCounterMetric(metricName, value); errUpCouterMetric != nil {
+			err = errors.Join(err, fmt.Errorf("cannot update metric %s, error: %S", metricName, errUpCouterMetric))
+		}
 	default:
 		logger.Log.Errorf("[Handler] Invalid type of new metric (%s)", metricType)
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	newMetricvalue, err := h.service.GetMetric(metricType, metricName)
+
+	newMetricvalue, errGetMetric := h.service.GetMetric(metricType, metricName)
+	if errGetMetric != nil {
+		err = errors.Join(err, fmt.Errorf("cannot get new value for %s", metricName))
+	}
 	if err != nil {
 		logger.Log.Errorf("[Handler] Cannot set new value (%s) for metric '%s' Error: %s", metricValue, metricName, err)
 		res.WriteHeader(http.StatusBadRequest)
@@ -158,18 +170,27 @@ func (h Handler) UpdateMetricJSONHandler(res http.ResponseWriter, req *http.Requ
 		ID:    inputData.ID,
 		MType: inputData.MType,
 	}
+	var err error
 
 	switch inputData.MType {
 	case "gauge":
-		h.service.UpdateGaugeMetric(inputData.ID, *inputData.Value)
+		if errUpGaugeMetric := h.service.UpdateGaugeMetric(inputData.ID, *inputData.Value); errUpGaugeMetric != nil {
+			err = errors.Join(err, fmt.Errorf("cannot update metric %s, error: %S", inputData.ID, errUpGaugeMetric))
+		}
 	case "counter":
-		h.service.UpdateCounterMetric(inputData.ID, *inputData.Delta)
+
+		if errUpCounterMetric := h.service.UpdateCounterMetric(inputData.ID, *inputData.Delta); errUpCounterMetric != nil {
+			err = errors.Join(err, fmt.Errorf("cannot update metric %s, error: %S", inputData.ID, errUpCounterMetric))
+		}
 	default:
 		logger.Log.Infof("[Handler] Invalid type of new metric (%s)", inputData.MType)
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	newMetricvalue, err := h.service.GetMetric(inputData.MType, inputData.ID)
+	newMetricvalue, errGetMetric := h.service.GetMetric(inputData.MType, inputData.ID)
+	if errGetMetric != nil {
+		err = errors.Join(err, fmt.Errorf("cannot get new value for %s", inputData.ID))
+	}
 	if err != nil {
 		logger.Log.Errorf("[Handler] Cannot set new value for metric '%s' Error: %s", inputData.ID, err)
 		res.WriteHeader(http.StatusBadRequest)
@@ -202,7 +223,32 @@ func (h Handler) UpdateMetricJSONHandler(res http.ResponseWriter, req *http.Requ
 	if err := encoder.Encode(resp); err != nil {
 		res.WriteHeader(http.StatusBadRequest)
 	}
+}
 
+func (h Handler) UpdateManyMetricsJSONHandler(res http.ResponseWriter, req *http.Request) {
+	if req.Method != http.MethodPost {
+		logger.Log.Errorf("[Handler] Error: %d", http.StatusMethodNotAllowed)
+		res.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	res.Header().Set("Content-Type", "application/json")
+
+	var inputData []models.Metrics
+	decoder := json.NewDecoder(req.Body)
+	if err := decoder.Decode(&inputData); err != nil {
+		logger.Log.Errorf("[Handler] Cannot decode input body Error: %s", err)
+		res.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	err := h.service.UpdateMetricsByBatch(inputData)
+	if err != nil {
+		logger.Log.Error("[Handler] Cannot update metrics in db. Error: %s", err)
+		res.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	logger.Log.Debug("[Handler] Metrics has been updated")
+	res.WriteHeader(http.StatusOK)
+	res.Header().Set("Content-Type", "application/json")
 }
 
 func (h Handler) GetMetricJSONHandler(res http.ResponseWriter, req *http.Request) {

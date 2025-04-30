@@ -2,6 +2,8 @@ package collector
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"os"
 	"time"
 
@@ -11,8 +13,8 @@ import (
 type MetricsService interface {
 	GetAllCountersMetrics() map[string]int64
 	GetAllGaugeMetrics() map[string]float64
-	UpdateCounterMetric(string, int64)
-	UpdateGaugeMetric(string, float64)
+	UpdateCounterMetric(string, int64) error
+	UpdateGaugeMetric(string, float64) error
 }
 
 type MetricCollector struct {
@@ -54,17 +56,26 @@ func (mc MetricCollector) RestoreMetrics() error {
 	if errOpenFile != nil {
 		return errOpenFile
 	}
+	var err error
 	metricsData := models.RestoredDataModel{}
-	if err := json.Unmarshal(savedData, &metricsData); err != nil {
+	if err = json.Unmarshal(savedData, &metricsData); err != nil {
 		return err
 	}
 
 	for counterMetric := range metricsData.Counter {
-		mc.service.UpdateCounterMetric(counterMetric, metricsData.Counter[counterMetric])
+		if errCounterMetric := mc.service.UpdateCounterMetric(counterMetric, metricsData.Counter[counterMetric]); errCounterMetric != nil {
+			err = errors.Join(err, fmt.Errorf("update metric %s error: %w", counterMetric, errCounterMetric))
+		}
 	}
 
 	for gaugeMetric := range metricsData.Gauge {
-		mc.service.UpdateGaugeMetric(gaugeMetric, metricsData.Gauge[gaugeMetric])
+		if errGaugeMetric := mc.service.UpdateGaugeMetric(gaugeMetric, metricsData.Gauge[gaugeMetric]); errGaugeMetric != nil {
+			err = errors.Join(err, fmt.Errorf("update metric %s error: %w", gaugeMetric, errGaugeMetric))
+		}
+	}
+
+	if err != nil {
+		return err
 	}
 
 	return nil

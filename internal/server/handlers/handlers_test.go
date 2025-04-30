@@ -183,7 +183,7 @@ func TestHandler_GetMetricHandler(t *testing.T) {
 			}
 			storage := storage.NewMemStorage()
 			service := service.New(&storage)
-			service.UpdateCounterMetric(tt.fields.metricName, tt.fields.metricValue)
+			_ = service.UpdateCounterMetric(tt.fields.metricName, tt.fields.metricValue)
 			h := &Handler{
 				service: service,
 			}
@@ -257,8 +257,8 @@ func TestHandler_GetAllMetricsHandler(t *testing.T) {
 			}
 			storage := storage.NewMemStorage()
 			service := service.New(&storage)
-			service.UpdateCounterMetric(tt.fields.counterMetricName, tt.fields.counterMetricValue)
-			service.UpdateGaugeMetric(tt.fields.gaugeMetricName, tt.fields.gaugeMetricValue)
+			_ = service.UpdateCounterMetric(tt.fields.counterMetricName, tt.fields.counterMetricValue)
+			_ = service.UpdateGaugeMetric(tt.fields.gaugeMetricName, tt.fields.gaugeMetricValue)
 			h := &Handler{
 				service: service,
 			}

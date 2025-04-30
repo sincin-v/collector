@@ -22,6 +22,7 @@ func CreateRouter(service *service.MetricsService, databaseClient *db.DBClient) 
 
 	router.Use(logMw.LoggerMiddleware)
 	router.Use(zipMw.CompressMiddleware)
+	router.Post("/updates/", h.UpdateManyMetricsJSONHandler)
 	router.Post("/update/", h.UpdateMetricJSONHandler)
 	router.Post("/update/{metricType}/{metricName}/{metricValue}", h.UpdateMetricHandler)
 	router.Post("/value/", h.GetMetricJSONHandler)
