@@ -103,7 +103,7 @@ func (ds *DBStorage) GetMetric(metricType string, metricName string) (string, er
 	resRow, err := ds.dbClient.RowQuery(ctxTimeout, query, metricName, metricType)
 	if err != nil {
 		logger.Log.Error("[DBStorage] Could get  metric %s. Error: %s", metricName, err)
-		return "", err
+		return "", errors.New("metric does not exists")
 	}
 	var m models.DBMetricModel
 	errScan := resRow.Scan(&m.ID, &m.Name, &m.MType, &m.GaugeValue, &m.CounterValue)
@@ -117,7 +117,7 @@ func (ds *DBStorage) GetMetric(metricType string, metricName string) (string, er
 	case "counter":
 		return fmt.Sprintf("%d", *m.CounterValue), nil
 	default:
-		return "", errors.New("[DBStorage] Invalid metric type")
+		return "", errors.New("invalid metric type")
 	}
 }
 

@@ -3,6 +3,7 @@ package config
 import (
 	"flag"
 	"log"
+	"time"
 
 	"github.com/caarlos0/env/v6"
 )
@@ -14,6 +15,8 @@ type Config struct {
 	Restore         bool   `env:"RESTORE"`
 	LogLevel        string `env:"LOG_LEVEL" envDefault:"INFO"`
 	DBDns           string `env:"DATABASE_DSN"`
+
+	RetryIntervals []time.Duration `env:"RETRY_INTERVALS" envSeparator:"," envDefault:"1s,3s,5s"`
 }
 
 func GetServerConfig() (*Config, error) {

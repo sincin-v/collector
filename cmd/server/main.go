@@ -34,7 +34,7 @@ func main() {
 	var err error
 
 	if serverConfig.DBDns != "" {
-		dbClient, err = db.New(baseCtx, serverConfig.DBDns)
+		dbClient, err = db.New(baseCtx, serverConfig.DBDns, serverConfig.RetryIntervals)
 		if err != nil {
 			logger.Log.Panic("Error connect to DB %s Error: %s", serverConfig.DBDns, err)
 		}

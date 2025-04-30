@@ -9,10 +9,11 @@ import (
 )
 
 type Config struct {
-	ServerHost     string        `env:"ADDRESS"`
-	ReportInterval time.Duration `env:"REPORT_INTERVAL"`
-	PollInterval   time.Duration `env:"POLL_INTERVAL"`
-	LogLevel       string        `env:"LOG_LEVEL" envDefault:"INFO"`
+	ServerHost     string          `env:"ADDRESS"`
+	ReportInterval time.Duration   `env:"REPORT_INTERVAL"`
+	PollInterval   time.Duration   `env:"POLL_INTERVAL"`
+	LogLevel       string          `env:"LOG_LEVEL" envDefault:"INFO"`
+	RetryIntervals []time.Duration `env:"RETRY_INTERVALS" envSeparator:"," envDefault:"1s,3s,5s"`
 }
 
 func GetAgentConfig() (*Config, error) {

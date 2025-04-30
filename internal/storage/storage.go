@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"sync"
@@ -68,13 +69,13 @@ func (ms *MemStorage) GetMetric(metricType string, metricName string) (string, e
 	case "gauge":
 		value, ok := ms.gauge[metricName]
 		if !ok {
-			return "", fmt.Errorf("there is no gauge metric %s", metricName)
+			return "", errors.New("metric does not exists")
 		}
 		return strconv.FormatFloat(value, 'f', -1, 64), nil
 	case "counter":
 		value, ok := ms.counter[metricName]
 		if !ok {
-			return "", fmt.Errorf("there is no counter metric %s", metricName)
+			return "", errors.New("metric does not exists")
 		}
 		return fmt.Sprintf("%d", value), nil
 	default:

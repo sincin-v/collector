@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/sincin-v/collector/internal/models"
 )
@@ -37,7 +38,8 @@ func TestHttpClient_SendPostRequest(t *testing.T) {
 			}))
 			defer ts.Close()
 			h := HTTPClient{
-				baseURL: ts.URL,
+				baseURL:        ts.URL,
+				retryIntervals: []time.Duration{1 * time.Second, 3 * time.Second, 5 * time.Second},
 			}
 
 			metricData := models.Metrics{

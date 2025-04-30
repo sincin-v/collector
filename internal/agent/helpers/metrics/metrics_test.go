@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/sincin-v/collector/internal/agent/clients/rest"
 	"github.com/sincin-v/collector/internal/service"
@@ -28,7 +29,7 @@ func TestCollector_CollectMetrics(t *testing.T) {
 			st := storage.NewMemStorage()
 			s := service.New(&st)
 
-			hs := rest.New("localhost:8888")
+			hs := rest.New("localhost:8888", []time.Duration{1 * time.Second, 3 * time.Second, 5 * time.Second})
 
 			c := Collector{
 				service:    s,
@@ -83,7 +84,7 @@ func TestCollector_SendMetrics(t *testing.T) {
 			_ = st.UpdateGaugeMetric(tt.fields.gaugeMetricName, tt.fields.gaugeMetricValue)
 			s := service.New(&st)
 
-			hs := rest.New(ts.URL)
+			hs := rest.New(ts.URL, []time.Duration{1 * time.Second, 3 * time.Second, 5 * time.Second})
 
 			c := Collector{
 				service:    s,
