@@ -8,6 +8,11 @@ import (
 	"github.com/caarlos0/env/v6"
 )
 
+var (
+	CounterMetricType = "counter"
+	GaugeMetricType   = "gauge"
+)
+
 type Config struct {
 	ServerHost     string          `env:"ADDRESS"`
 	ReportInterval time.Duration   `env:"REPORT_INTERVAL"`

@@ -34,7 +34,7 @@ func main() {
 	var err error
 
 	if serverConfig.DBDns != "" {
-		dbClient, err = db.New(baseCtx, serverConfig.DBDns, serverConfig.RetryIntervals)
+		dbClient, err = db.New(serverConfig.DBDns, serverConfig.RetryIntervals)
 		if err != nil {
 			logger.Log.Panic("Error connect to DB %s Error: %s", serverConfig.DBDns, err)
 		}
@@ -53,7 +53,7 @@ func main() {
 		metricCollector := collector.New(metricService, serverConfig.FileStoragePath)
 
 		if serverConfig.Restore {
-			err := metricCollector.RestoreMetrics()
+			err := metricCollector.RestoreMetrics(baseCtx)
 			if err != nil {
 				logger.Log.Warnf("Cannot restore metrics from %s", serverConfig.FileStoragePath)
 			}
@@ -62,7 +62,7 @@ func main() {
 		var errSaveMetric error
 
 		go func() {
-			errSaveMetric = metricCollector.SaveMetrics(int(serverConfig.StoreInterval))
+			errSaveMetric = metricCollector.SaveMetrics(baseCtx, int(serverConfig.StoreInterval))
 			if errSaveMetric != nil {
 				logger.Log.Error("Error save metric: %s", errSaveMetric)
 			}

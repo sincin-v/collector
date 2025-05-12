@@ -18,7 +18,7 @@ type DBClient struct {
 	retryIntervals []time.Duration
 }
 
-func New(ctx context.Context, dns string, retryIntervals []time.Duration) (*DBClient, error) {
+func New(dns string, retryIntervals []time.Duration) (*DBClient, error) {
 	database, err := sql.Open("pgx", dns)
 	if err != nil {
 		logger.Log.Error("[DBClient] Could no create DB connection. Error: %s", err)

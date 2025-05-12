@@ -3,18 +3,20 @@ package collector
 import (
 	"encoding/json"
 	"errors"
+	"context"
 	"fmt"
 	"os"
 	"time"
 
 	"github.com/sincin-v/collector/internal/models"
+	"github.com/sincin-v/collector/internal/server/config"
 )
 
 type MetricsService interface {
-	GetAllCountersMetrics() map[string]int64
-	GetAllGaugeMetrics() map[string]float64
-	UpdateCounterMetric(string, int64) error
-	UpdateGaugeMetric(string, float64) error
+	GetAllCountersMetrics(context.Context) map[string]int64
+	GetAllGaugeMetrics(context.Context) map[string]float64
+	UpdateCounterMetric(context.Context, string, int64) error
+	UpdateGaugeMetric(context.Context, string, float64) error
 }
 
 type MetricCollector struct {
@@ -29,13 +31,13 @@ func New(s MetricsService, path string) MetricCollector {
 	}
 }
 
-func (mc MetricCollector) SaveMetrics(interval int) error {
+func (mc MetricCollector) SaveMetrics(ctx context.Context, interval int) error {
 	for {
 		time.Sleep(time.Duration(interval) * time.Second)
 
 		metricsMap := map[string]interface{}{
-			"counter": mc.service.GetAllCountersMetrics(),
-			"gauge":   mc.service.GetAllGaugeMetrics(),
+			config.CounterMetricType: mc.service.GetAllCountersMetrics(ctx),
+			config.GaugeMetricType:   mc.service.GetAllGaugeMetrics(ctx),
 		}
 		resultData, errJSON := json.MarshalIndent(metricsMap, "", "   ")
 		if errJSON != nil {
@@ -50,7 +52,7 @@ func (mc MetricCollector) SaveMetrics(interval int) error {
 	}
 }
 
-func (mc MetricCollector) RestoreMetrics() error {
+func (mc MetricCollector) RestoreMetrics(ctx context.Context) error {
 
 	savedData, errOpenFile := os.ReadFile(mc.path)
 	if errOpenFile != nil {
@@ -63,13 +65,13 @@ func (mc MetricCollector) RestoreMetrics() error {
 	}
 
 	for counterMetric := range metricsData.Counter {
-		if errCounterMetric := mc.service.UpdateCounterMetric(counterMetric, metricsData.Counter[counterMetric]); errCounterMetric != nil {
+		if errCounterMetric := mc.service.UpdateCounterMetric(ctx, counterMetric, metricsData.Counter[counterMetric]); errCounterMetric != nil {
 			err = errors.Join(err, fmt.Errorf("update metric %s error: %w", counterMetric, errCounterMetric))
 		}
 	}
 
 	for gaugeMetric := range metricsData.Gauge {
-		if errGaugeMetric := mc.service.UpdateGaugeMetric(gaugeMetric, metricsData.Gauge[gaugeMetric]); errGaugeMetric != nil {
+		if errGaugeMetric := mc.service.UpdateGaugeMetric(ctx, gaugeMetric, metricsData.Gauge[gaugeMetric]); errGaugeMetric != nil {
 			err = errors.Join(err, fmt.Errorf("update metric %s error: %w", gaugeMetric, errGaugeMetric))
 		}
 	}

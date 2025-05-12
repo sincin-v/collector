@@ -5,8 +5,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"context"
 
 	"github.com/sincin-v/collector/internal/logger"
+	"github.com/sincin-v/collector/internal/server/config"
 	"github.com/sincin-v/collector/internal/service"
 	"github.com/sincin-v/collector/internal/storage"
 )
@@ -29,7 +31,7 @@ func TestHandler_UpdateMetricHandler(t *testing.T) {
 		{
 			name: "positive test update counter metric handler",
 			args: args{
-				metricType:  "counter",
+				metricType:  config.CounterMetricType,
 				metricName:  "testCounterMetric",
 				metricValue: "1",
 				httpMethod:  http.MethodPost,
@@ -41,7 +43,7 @@ func TestHandler_UpdateMetricHandler(t *testing.T) {
 		{
 			name: "positive test update gauge metric handler",
 			args: args{
-				metricType:  "gauge",
+				metricType:  config.GaugeMetricType,
 				metricName:  "testGaugeMetric",
 				metricValue: "1.0",
 				httpMethod:  http.MethodPost,
@@ -53,7 +55,7 @@ func TestHandler_UpdateMetricHandler(t *testing.T) {
 		{
 			name: "negative test update gauge metric handler with invalid type",
 			args: args{
-				metricType:  "counter",
+				metricType:  config.CounterMetricType,
 				metricName:  "testGaugeMetric",
 				metricValue: "1.0",
 				httpMethod:  http.MethodPost,
@@ -65,7 +67,7 @@ func TestHandler_UpdateMetricHandler(t *testing.T) {
 		{
 			name: "negative test update metric handler with invalid value",
 			args: args{
-				metricType:  "gauge",
+				metricType:  config.GaugeMetricType,
 				metricName:  "testGaugeMetric",
 				metricValue: "invalidValue",
 				httpMethod:  http.MethodPost,
@@ -153,9 +155,9 @@ func TestHandler_GetMetricHandler(t *testing.T) {
 	}{
 		{
 			name:   "positive test get counter metric handler",
-			fields: fields{"counter", "testCounterMetric", 1},
+			fields: fields{config.CounterMetricType, "testCounterMetric", 1},
 			args: args{
-				metricType: "counter",
+				metricType: config.CounterMetricType,
 				metricName: "testCounterMetric",
 				httpMethod: http.MethodGet,
 			},
@@ -165,7 +167,7 @@ func TestHandler_GetMetricHandler(t *testing.T) {
 		},
 		{
 			name:   "negative test invalid method",
-			fields: fields{"counter", "testCounterMetric", 1},
+			fields: fields{config.CounterMetricType, "testCounterMetric", 1},
 			args: args{
 				metricType: "histogram",
 				metricName: "testHistogramMetric",
@@ -183,7 +185,8 @@ func TestHandler_GetMetricHandler(t *testing.T) {
 			}
 			storage := storage.NewMemStorage()
 			service := service.New(&storage)
-			_ = service.UpdateCounterMetric(tt.fields.metricName, tt.fields.metricValue)
+			ctx := context.Background()
+			_ = service.UpdateCounterMetric(ctx, tt.fields.metricName, tt.fields.metricValue)
 			h := &Handler{
 				service: service,
 			}
@@ -257,8 +260,9 @@ func TestHandler_GetAllMetricsHandler(t *testing.T) {
 			}
 			storage := storage.NewMemStorage()
 			service := service.New(&storage)
-			_ = service.UpdateCounterMetric(tt.fields.counterMetricName, tt.fields.counterMetricValue)
-			_ = service.UpdateGaugeMetric(tt.fields.gaugeMetricName, tt.fields.gaugeMetricValue)
+			ctx := context.Background()
+			_ = service.UpdateCounterMetric(ctx, tt.fields.counterMetricName, tt.fields.counterMetricValue)
+			_ = service.UpdateGaugeMetric(ctx, tt.fields.gaugeMetricName, tt.fields.gaugeMetricValue)
 			h := &Handler{
 				service: service,
 			}

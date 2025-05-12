@@ -2,7 +2,9 @@ package service
 
 import (
 	"testing"
+	"context"
 
+	"github.com/sincin-v/collector/internal/server/config"
 	"github.com/sincin-v/collector/internal/storage"
 )
 
@@ -25,14 +27,14 @@ func TestMetricsService_GetMetric(t *testing.T) {
 	}{
 		{
 			name:   "positive get counter metric",
-			fields: fields{"counter", "testCounterMetric", 1},
-			args:   args{"counter", "testCounterMetric"},
+			fields: fields{config.CounterMetricType, "testCounterMetric", 1},
+			args:   args{config.CounterMetricType, "testCounterMetric"},
 			want:   "1",
 		},
 		{
 			name:    "negative get counter metric",
-			fields:  fields{"counter", "testCounterMetric", 1},
-			args:    args{"counter", "testInvalidCounterMetric"},
+			fields:  fields{config.CounterMetricType, "testCounterMetric", 1},
+			args:    args{config.CounterMetricType, "testInvalidCounterMetric"},
 			want:    "",
 			wantErr: true,
 		},
@@ -43,8 +45,10 @@ func TestMetricsService_GetMetric(t *testing.T) {
 			s := MetricsService{
 				metricStorage: &st,
 			}
-			_ = s.UpdateCounterMetric(tt.fields.metricName, tt.fields.metricValue)
-			got, err := s.GetMetric(tt.args.metricType, tt.args.metricName)
+			ctx := context.Background()
+
+			_ = s.UpdateCounterMetric(ctx, tt.fields.metricName, tt.fields.metricValue)
+			got, err := s.GetMetric(ctx, tt.args.metricType, tt.args.metricName)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("MetricsService.GetMetric() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -83,14 +87,15 @@ func TestMetricsService_GetAllMetrics(t *testing.T) {
 			s := MetricsService{
 				metricStorage: &st,
 			}
+			ctx := context.Background()
 			for gaugeMetricName := range tt.fields.gaugeMetrics {
-				_ = s.UpdateGaugeMetric(gaugeMetricName, tt.fields.gaugeMetrics[gaugeMetricName])
+				_ = s.UpdateGaugeMetric(ctx, gaugeMetricName, tt.fields.gaugeMetrics[gaugeMetricName])
 			}
 			for counterMetricName := range tt.fields.counterMetrics {
-				_ = s.UpdateCounterMetric(counterMetricName, tt.fields.counterMetrics[counterMetricName])
+				_ = s.UpdateCounterMetric(ctx, counterMetricName, tt.fields.counterMetrics[counterMetricName])
 			}
 
-			got, got1 := s.GetAllMetrics()
+			got, got1 := s.GetAllMetrics(ctx)
 
 			for counterMetricName := range tt.want {
 				if tt.want[counterMetricName] != got[counterMetricName] {
@@ -129,11 +134,13 @@ func TestMetricsService_UpdateGaugeMetric(t *testing.T) {
 			s := MetricsService{
 				metricStorage: &st,
 			}
-			err := s.UpdateGaugeMetric(tt.args.metricName, tt.args.value)
+			ctx := context.Background()
+
+			err := s.UpdateGaugeMetric(ctx, tt.args.metricName, tt.args.value)
 			if err != nil {
 				t.Errorf("MetricsService.UpdateGaugeMetric()  Error: %s", err)
 			}
-			got, _ := s.GetMetric("gauge", tt.args.metricName)
+			got, _ := s.GetMetric(ctx, config.GaugeMetricType, tt.args.metricName)
 			if got != tt.want {
 				t.Errorf("MetricsService.GetMetric() = %v, want %v", got, tt.want)
 			}
@@ -164,11 +171,13 @@ func TestMetricsService_UpdateCounterMetric(t *testing.T) {
 			s := MetricsService{
 				metricStorage: &st,
 			}
-			err := s.UpdateCounterMetric(tt.args.metricName, tt.args.value)
+			ctx := context.Background()
+
+			err := s.UpdateCounterMetric(ctx, tt.args.metricName, tt.args.value)
 			if err != nil {
 				t.Errorf("MetricsService.UpdateCounterMetric()  Error: %s", err)
 			}
-			got, _ := s.GetMetric("counter", tt.args.metricName)
+			got, _ := s.GetMetric(ctx, config.CounterMetricType, tt.args.metricName)
 			if got != tt.want {
 				t.Errorf("MetricsService.GetMetric() = %v, want %v", got, tt.want)
 			}

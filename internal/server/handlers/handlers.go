@@ -12,14 +12,15 @@ import (
 
 	"github.com/sincin-v/collector/internal/logger"
 	"github.com/sincin-v/collector/internal/models"
+	"github.com/sincin-v/collector/internal/server/config"
 )
 
 type MetricsService interface {
-	UpdateCounterMetric(string, int64) error
-	UpdateGaugeMetric(string, float64) error
-	GetMetric(string, string) (string, error)
-	GetAllMetrics() (map[string]int64, map[string]float64)
-	UpdateMetricsByBatch([]models.Metrics) error
+	UpdateCounterMetric(context.Context, string, int64) error
+	UpdateGaugeMetric(context.Context, string, float64) error
+	GetMetric(context.Context, string, string) (string, error)
+	GetAllMetrics(context.Context) (map[string]int64, map[string]float64)
+	UpdateMetricsByBatch(context.Context, []models.Metrics) error
 }
 
 type DBClient interface {
@@ -29,18 +30,17 @@ type DBClient interface {
 type Handler struct {
 	service  MetricsService
 	dbClient DBClient
-	ctx      context.Context
 }
 
-func New(ctx context.Context, s MetricsService, db DBClient) (*Handler, error) {
+func New(s MetricsService, db DBClient) (*Handler, error) {
 	return &Handler{
 		service:  s,
 		dbClient: db,
-		ctx:      ctx,
 	}, nil
 }
 
 func (h Handler) UpdateMetricHandler(res http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
 	if req.Method != http.MethodPost {
 		logger.Log.Errorf("[Handler] Error: %d", http.StatusMethodNotAllowed)
 		res.WriteHeader(http.StatusMethodNotAllowed)
@@ -55,25 +55,25 @@ func (h Handler) UpdateMetricHandler(res http.ResponseWriter, req *http.Request)
 	var err error
 
 	switch metricType {
-	case "gauge":
+	case config.GaugeMetricType:
 		value, errParseFloat := strconv.ParseFloat(metricValue, 64)
 		if errParseFloat != nil {
 			logger.Log.Errorf("[Handler] Invalid value (%s) for type (%s)", metricValue, metricType)
 			res.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		if errUpGaugeMetric := h.service.UpdateGaugeMetric(metricName, value); errUpGaugeMetric != nil {
-			err = errors.Join(err, fmt.Errorf("cannot update metric %s, error: %S", metricName, errUpGaugeMetric))
+		if errUpGaugeMetric := h.service.UpdateGaugeMetric(ctx, metricName, value); errUpGaugeMetric != nil {
+			err = errors.Join(err, fmt.Errorf("cannot update metric %s, error: %s", metricName, errUpGaugeMetric))
 		}
-	case "counter":
+	case config.CounterMetricType:
 		value, errParseInt := strconv.ParseInt(metricValue, 10, 64)
 		if errParseInt != nil {
 			logger.Log.Errorf("[Handler] Invalid value (%s) for type (%s)", metricValue, metricType)
 			res.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		if errUpCouterMetric := h.service.UpdateCounterMetric(metricName, value); errUpCouterMetric != nil {
-			err = errors.Join(err, fmt.Errorf("cannot update metric %s, error: %S", metricName, errUpCouterMetric))
+		if errUpCouterMetric := h.service.UpdateCounterMetric(ctx, metricName, value); errUpCouterMetric != nil {
+			err = errors.Join(err, fmt.Errorf("cannot update metric %s, error: %s", metricName, errUpCouterMetric))
 		}
 	default:
 		logger.Log.Errorf("[Handler] Invalid type of new metric (%s)", metricType)
@@ -81,7 +81,7 @@ func (h Handler) UpdateMetricHandler(res http.ResponseWriter, req *http.Request)
 		return
 	}
 
-	newMetricvalue, errGetMetric := h.service.GetMetric(metricType, metricName)
+	newMetricvalue, errGetMetric := h.service.GetMetric(ctx, metricType, metricName)
 	if errGetMetric != nil {
 		err = errors.Join(err, fmt.Errorf("cannot get new value for %s", metricName))
 	}
@@ -95,6 +95,7 @@ func (h Handler) UpdateMetricHandler(res http.ResponseWriter, req *http.Request)
 }
 
 func (h Handler) GetMetricHandler(res http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
 	if req.Method != http.MethodGet {
 		logger.Log.Errorf("[Handler] Error: %d", http.StatusMethodNotAllowed)
 		res.WriteHeader(http.StatusMethodNotAllowed)
@@ -102,7 +103,7 @@ func (h Handler) GetMetricHandler(res http.ResponseWriter, req *http.Request) {
 	}
 	metricType := req.PathValue("metricType")
 	metricName := req.PathValue("metricName")
-	metric, err := h.service.GetMetric(metricType, metricName)
+	metric, err := h.service.GetMetric(ctx, metricType, metricName)
 	if err != nil {
 		logger.Log.Errorf("[Handler] Metric %s not found. Error: %s", metricName, err)
 		res.WriteHeader(http.StatusNotFound)
@@ -117,15 +118,18 @@ func (h Handler) GetMetricHandler(res http.ResponseWriter, req *http.Request) {
 }
 
 func (h Handler) GetAllMetricsHandler(res http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
+	ctxTimeout, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 	res.Header().Set("Content-Type", "text/html")
 	if req.Method != http.MethodGet {
 		logger.Log.Errorf("[Handler] Error: %d", http.StatusMethodNotAllowed)
 		res.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
-	counterMetric, gaugeMetrics := h.service.GetAllMetrics()
+	counterMetric, gaugeMetrics := h.service.GetAllMetrics(ctxTimeout)
 	for metricName := range counterMetric {
-		metricValue, err := h.service.GetMetric("counter", metricName)
+		metricValue, err := h.service.GetMetric(ctxTimeout, config.CounterMetricType, metricName)
 		if err != nil {
 			logger.Log.Errorf("[Handler] Cannot get value of metric '%s' . Error: %s", metricName, err)
 			continue
@@ -137,7 +141,7 @@ func (h Handler) GetAllMetricsHandler(res http.ResponseWriter, req *http.Request
 		}
 	}
 	for metricName := range gaugeMetrics {
-		metricValue, err := h.service.GetMetric("gauge", metricName)
+		metricValue, err := h.service.GetMetric(ctxTimeout, config.GaugeMetricType, metricName)
 		if err != nil {
 			logger.Log.Errorf("[Handler] Cannot get value of metric '%s' . Error: %s", metricName, err)
 			continue
@@ -152,6 +156,9 @@ func (h Handler) GetAllMetricsHandler(res http.ResponseWriter, req *http.Request
 }
 
 func (h Handler) UpdateMetricJSONHandler(res http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
+	ctxTimeout, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 	if req.Method != http.MethodPost {
 		logger.Log.Errorf("Error: %d", http.StatusMethodNotAllowed)
 		res.WriteHeader(http.StatusMethodNotAllowed)
@@ -173,13 +180,13 @@ func (h Handler) UpdateMetricJSONHandler(res http.ResponseWriter, req *http.Requ
 	var err error
 
 	switch inputData.MType {
-	case "gauge":
-		if errUpGaugeMetric := h.service.UpdateGaugeMetric(inputData.ID, *inputData.Value); errUpGaugeMetric != nil {
+	case config.GaugeMetricType:
+		if errUpGaugeMetric := h.service.UpdateGaugeMetric(ctxTimeout, inputData.ID, *inputData.Value); errUpGaugeMetric != nil {
 			err = errors.Join(err, fmt.Errorf("cannot update metric %s, error: %S", inputData.ID, errUpGaugeMetric))
 		}
-	case "counter":
+	case config.CounterMetricType:
 
-		if errUpCounterMetric := h.service.UpdateCounterMetric(inputData.ID, *inputData.Delta); errUpCounterMetric != nil {
+		if errUpCounterMetric := h.service.UpdateCounterMetric(ctxTimeout, inputData.ID, *inputData.Delta); errUpCounterMetric != nil {
 			err = errors.Join(err, fmt.Errorf("cannot update metric %s, error: %S", inputData.ID, errUpCounterMetric))
 		}
 	default:
@@ -187,7 +194,7 @@ func (h Handler) UpdateMetricJSONHandler(res http.ResponseWriter, req *http.Requ
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	newMetricvalue, errGetMetric := h.service.GetMetric(inputData.MType, inputData.ID)
+	newMetricvalue, errGetMetric := h.service.GetMetric(ctxTimeout, inputData.MType, inputData.ID)
 	if errGetMetric != nil {
 		err = errors.Join(err, fmt.Errorf("cannot get new value for %s", inputData.ID))
 	}
@@ -198,7 +205,7 @@ func (h Handler) UpdateMetricJSONHandler(res http.ResponseWriter, req *http.Requ
 	}
 
 	switch inputData.MType {
-	case "gauge":
+	case config.GaugeMetricType:
 		value, err := strconv.ParseFloat(newMetricvalue, 64)
 		if err != nil {
 			logger.Log.Debugf("[Handler] Invalid value (%s) for type (gauge)", value)
@@ -206,7 +213,7 @@ func (h Handler) UpdateMetricJSONHandler(res http.ResponseWriter, req *http.Requ
 			return
 		}
 		resp.Value = &value
-	case "counter":
+	case config.CounterMetricType:
 		value, err := strconv.ParseInt(newMetricvalue, 10, 64)
 		if err != nil {
 			logger.Log.Debugf("[Handler] Invalid value (%s) for type (counter)", value)
@@ -226,6 +233,9 @@ func (h Handler) UpdateMetricJSONHandler(res http.ResponseWriter, req *http.Requ
 }
 
 func (h Handler) UpdateManyMetricsJSONHandler(res http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
+	ctxTimeout, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 	if req.Method != http.MethodPost {
 		logger.Log.Errorf("[Handler] Error: %d", http.StatusMethodNotAllowed)
 		res.WriteHeader(http.StatusMethodNotAllowed)
@@ -240,7 +250,7 @@ func (h Handler) UpdateManyMetricsJSONHandler(res http.ResponseWriter, req *http
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	err := h.service.UpdateMetricsByBatch(inputData)
+	err := h.service.UpdateMetricsByBatch(ctxTimeout, inputData)
 	if err != nil {
 		logger.Log.Error("[Handler] Cannot update metrics in db. Error: %s", err)
 		res.WriteHeader(http.StatusInternalServerError)
@@ -252,6 +262,9 @@ func (h Handler) UpdateManyMetricsJSONHandler(res http.ResponseWriter, req *http
 }
 
 func (h Handler) GetMetricJSONHandler(res http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
+	ctxTimeout, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 	if req.Method != http.MethodPost {
 		logger.Log.Errorf("[Handler] Error: %d", http.StatusMethodNotAllowed)
 		res.WriteHeader(http.StatusMethodNotAllowed)
@@ -267,7 +280,7 @@ func (h Handler) GetMetricJSONHandler(res http.ResponseWriter, req *http.Request
 		return
 	}
 
-	metric, err := h.service.GetMetric(inputData.MType, inputData.ID)
+	metric, err := h.service.GetMetric(ctxTimeout, inputData.MType, inputData.ID)
 	if err != nil {
 		logger.Log.Errorf("[Handler] Metric %s not found. Error: %s", inputData.ID, err)
 		res.WriteHeader(http.StatusNotFound)
@@ -279,7 +292,7 @@ func (h Handler) GetMetricJSONHandler(res http.ResponseWriter, req *http.Request
 		MType: inputData.MType,
 	}
 	switch inputData.MType {
-	case "gauge":
+	case config.GaugeMetricType:
 		value, err := strconv.ParseFloat(metric, 64)
 		if err != nil {
 			logger.Log.Debugf("[Handler] Invalid value (%s) for type (gauge)", value)
@@ -287,7 +300,7 @@ func (h Handler) GetMetricJSONHandler(res http.ResponseWriter, req *http.Request
 			return
 		}
 		resp.Value = &value
-	case "counter":
+	case config.CounterMetricType:
 		value, err := strconv.ParseInt(metric, 10, 64)
 		if err != nil {
 			logger.Log.Debugf("[Handler] Invalid value (%s) for type (counter)", value)
@@ -305,7 +318,8 @@ func (h Handler) GetMetricJSONHandler(res http.ResponseWriter, req *http.Request
 }
 
 func (h Handler) Ping(res http.ResponseWriter, req *http.Request) {
-	ctxTimeout, cancel := context.WithTimeout(h.ctx, 1*time.Second)
+	ctx := req.Context()
+	ctxTimeout, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
 	result, err := h.dbClient.Ping(ctxTimeout)
 	if err != nil {

@@ -3,8 +3,11 @@ package storage
 import (
 	// "encoding/json"
 	// "os"
+	"context"
 	"reflect"
 	"testing"
+
+	"github.com/sincin-v/collector/internal/server/config"
 )
 
 func TestMetricStorage_UpdateGaugeMetric(t *testing.T) {
@@ -35,11 +38,12 @@ func TestMetricStorage_UpdateGaugeMetric(t *testing.T) {
 				gauge:   tt.fields.gauge,
 				counter: tt.fields.counter,
 			}
-			err := ms.UpdateGaugeMetric(tt.args.n, tt.args.v)
+			ctx := context.Background()
+			err := ms.UpdateGaugeMetric(ctx, tt.args.n, tt.args.v)
 			if err != nil {
 				t.Errorf("MetricsService.UpdateGaugeMetric()  Error: %s", err)
 			}
-			if got, _ := ms.GetMetric("gauge", tt.args.n); !reflect.DeepEqual(got, tt.want) {
+			if got, _ := ms.GetMetric(ctx, config.GaugeMetricType, tt.args.n); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("MetricStorage.UpdateGaugeMetric() = %v, want %v", got, tt.want)
 			}
 		})
@@ -80,11 +84,12 @@ func TestMetricStorage_UpdateCounterMetric(t *testing.T) {
 				gauge:   tt.fields.gauge,
 				counter: tt.fields.counter,
 			}
-			err := ms.UpdateCounterMetric(tt.args.n, tt.args.v)
+			ctx := context.Background()
+			err := ms.UpdateCounterMetric(ctx, tt.args.n, tt.args.v)
 			if err != nil {
 				t.Errorf("MetricsService.UpdateCounterMetric()  Error: %s", err)
 			}
-			if got, _ := ms.GetMetric("counter", tt.args.n); !reflect.DeepEqual(got, tt.want) {
+			if got, _ := ms.GetMetric(ctx, config.CounterMetricType, tt.args.n); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("MetricStorage.UpdateCounterMetric() = %v, want %v", got, tt.want)
 			}
 		})
@@ -110,26 +115,26 @@ func TestMetricStorage_GetMetric(t *testing.T) {
 		{
 			name:   "positive test get counter metric",
 			fields: fields{counter: map[string]int64{"testMetric": 1}},
-			args:   args{"counter", "testMetric"},
+			args:   args{config.CounterMetricType, "testMetric"},
 			want:   "1",
 		},
 		{
 			name:   "positive test get gauge metric",
 			fields: fields{gauge: map[string]float64{"testMetric": 0.1}},
-			args:   args{"gauge", "testMetric"},
+			args:   args{config.GaugeMetricType, "testMetric"},
 			want:   "0.1",
 		},
 		{
 			name:    "positive test get not exist gauge metric",
 			fields:  fields{gauge: make(map[string]float64)},
-			args:    args{"gauge", "testMetric"},
+			args:    args{config.GaugeMetricType, "testMetric"},
 			want:    "",
 			wantErr: true,
 		},
 		{
 			name:    "positive test get not exist counter metric",
 			fields:  fields{counter: make(map[string]int64)},
-			args:    args{"counter", "testMetric"},
+			args:    args{config.CounterMetricType, "testMetric"},
 			want:    "",
 			wantErr: true,
 		},
@@ -147,7 +152,8 @@ func TestMetricStorage_GetMetric(t *testing.T) {
 				gauge:   tt.fields.gauge,
 				counter: tt.fields.counter,
 			}
-			got, err := ms.GetMetric(tt.args.t, tt.args.n)
+			ctx := context.Background()
+			got, err := ms.GetMetric(ctx, tt.args.t, tt.args.n)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("MetricStorage.GetMetric() error = %v, wantErr %v", err, tt.wantErr)
 				return

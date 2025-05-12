@@ -8,6 +8,11 @@ import (
 	"github.com/caarlos0/env/v6"
 )
 
+var (
+	CounterMetricType = "counter"
+	GaugeMetricType   = "gauge"
+)
+
 type Config struct {
 	Host            string `env:"ADDRESS"`
 	StoreInterval   int64  `env:"STORE_INTERVAL"`

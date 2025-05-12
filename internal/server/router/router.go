@@ -1,8 +1,6 @@
 package router
 
 import (
-	"context"
-
 	"github.com/go-chi/chi/v5"
 	"github.com/sincin-v/collector/internal/server/clients/db"
 	"github.com/sincin-v/collector/internal/server/handlers"
@@ -12,9 +10,8 @@ import (
 )
 
 func CreateRouter(service *service.MetricsService, databaseClient *db.DBClient) (*chi.Mux, error) {
-	baseCtx := context.Background()
 
-	h, err := handlers.New(baseCtx, service, databaseClient)
+	h, err := handlers.New(service, databaseClient)
 	if err != nil {
 		return nil, err
 	}
