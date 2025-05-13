@@ -22,6 +22,7 @@ type Config struct {
 	Restore         bool   `env:"RESTORE"`
 	LogLevel        string `env:"LOG_LEVEL" envDefault:"INFO"`
 	DBDns           string `env:"DATABASE_DSN"`
+	MigrationPath   string `env:"MIGRATION_PATH" envDefault:"internal/database/migrations"`
 
 	RetryIntervals []time.Duration `env:"RETRY_INTERVALS" envSeparator:"," envDefault:"1s,3s,5s"`
 }
@@ -34,6 +35,7 @@ func GetServerConfig() (*Config, error) {
 	flag.StringVar(&cfg.FileStoragePath, "f", "/tmp/metric_storage", "Path to storage file")
 	flag.BoolVar(&cfg.Restore, "r", true, "Flag of restore collected metrics data")
 	flag.StringVar(&cfg.DBDns, "d", "", "DNS fo connect to DB")
+	flag.StringVar(&cfg.MigrationPath, "p", "internal/database/migrations", "path to migrations files")
 	flag.Parse()
 	var err = env.Parse(cfg)
 	if err != nil {

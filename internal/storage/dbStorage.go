@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"time"
 
 	"github.com/sincin-v/collector/internal/logger"
 	"github.com/sincin-v/collector/internal/models"
@@ -17,27 +16,23 @@ type DBStorage struct {
 	dbClient db.DBClient
 }
 
-func NewDBStorage(ctx context.Context, dbClient db.DBClient) (*DBStorage, error) {
+func NewDBStorage(ctx context.Context, dbClient db.DBClient) *DBStorage {
 	ds := DBStorage{
 		dbClient: dbClient,
 	}
-	if err := ds.initialDataBaseTable(ctx); err != nil {
-		logger.Log.Error("[DBClient] Could not init DBStorage. Error: %s", err)
-		return nil, err
-	}
-	return &ds, nil
+	return &ds
 }
 
-func (ds *DBStorage) initialDataBaseTable(ctx context.Context) error {
-	query := "CREATE TABLE IF NOT EXISTS metrics (id SERIAL PRIMARY KEY, name VARCHAR UNIQUE, m_type VARCHAR, gauge_value DOUBLE PRECISION, counter_value BIGINT, CONSTRAINT UC_metric_name UNIQUE (name, m_type) );"
-	ctxTimeout, cancel := context.WithTimeout(ctx, config.OperationTimeout)
-	defer cancel()
-	if err := ds.dbClient.Execute(ctxTimeout, query); err != nil {
-		logger.Log.Error("[DBStorage] Could not create table 'metrics'. Error: %s", err)
-		return err
-	}
-	return nil
-}
+// func (ds *DBStorage) initialDataBaseTable(ctx context.Context) error {
+// 	query := "CREATE TABLE IF NOT EXISTS metrics (id SERIAL PRIMARY KEY, name VARCHAR UNIQUE, m_type VARCHAR, gauge_value DOUBLE PRECISION, counter_value BIGINT, CONSTRAINT UC_metric_name UNIQUE (name, m_type) );"
+// 	ctxTimeout, cancel := context.WithTimeout(ctx, config.OperationTimeout)
+// 	defer cancel()
+// 	if err := ds.dbClient.Execute(ctxTimeout, query); err != nil {
+// 		logger.Log.Error("[DBStorage] Could not create table 'metrics'. Error: %s", err)
+// 		return err
+// 	}
+// 	return nil
+// }
 
 func (ds *DBStorage) UpdateMetricsByBatch(ctx context.Context, metrics []models.Metrics) error {
 	tx, err := ds.dbClient.BeginTx(ctx)

@@ -11,6 +11,7 @@ import (
 	"github.com/sincin-v/collector/internal/server/router"
 	"github.com/sincin-v/collector/internal/service"
 	"github.com/sincin-v/collector/internal/storage"
+	"github.com/sincin-v/collector/internal/database/migrator"
 )
 
 func main() {
@@ -39,10 +40,11 @@ func main() {
 			logger.Log.Panic("Error connect to DB %s Error: %s", serverConfig.DBDns, err)
 		}
 
-		storage, errCreateDBStorage := storage.NewDBStorage(baseCtx, *dbClient)
-		if errCreateDBStorage != nil {
-			logger.Log.Panic("Error create DB storage %s Error: %s", serverConfig.DBDns, errCreateDBStorage)
+		migrateErr := migrator.ApplyMigrations(serverConfig.DBDns, serverConfig.MigrationPath)
+		if migrateErr != nil {
+			logger.Log.Panic(migrateErr)
 		}
+		storage := storage.NewDBStorage(baseCtx, *dbClient)
 		metricService = service.New(storage)
 
 		defer dbClient.Close()
