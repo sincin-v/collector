@@ -163,5 +163,10 @@ func (ds *DBStorage) GetAllGaugeMetrics(ctx context.Context) map[string]float64 
 		logger.Log.Errorf("[DBStorage] Cannot get next value for gauge metric. Error: %s", queryErr)
 		return nil
 	}
+	defer func() {
+		if errClose := resRows.Close(); errClose != nil {
+			err = errors.Join(err, fmt.Errorf("[DBStorage] close rows error: %w", errClose))
+		}
+	}()
 	return result
 }
