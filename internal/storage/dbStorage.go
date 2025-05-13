@@ -127,6 +127,12 @@ func (ds *DBStorage) GetAllCountersMetrics(ctx context.Context) map[string]int64
 		}
 		result[*m.Name] = *m.CounterValue
 	}
+	queryErr := resRows.Err()
+	if queryErr != nil {
+		logger.Log.Errorf("[DBStorage] Cannot get next value for counter metric. Error: %s", queryErr)
+		return nil
+	}
+
 	defer func() {
 		if errClose := resRows.Close(); errClose != nil {
 			err = errors.Join(err, fmt.Errorf("[DBStorage] close rows error: %w", errClose))
@@ -151,6 +157,11 @@ func (ds *DBStorage) GetAllGaugeMetrics(ctx context.Context) map[string]float64 
 			return nil
 		}
 		result[*m.Name] = *m.GaugeValue
+	}
+	queryErr := resRows.Err()
+	if queryErr != nil {
+		logger.Log.Errorf("[DBStorage] Cannot get next value for gauge metric. Error: %s", queryErr)
+		return nil
 	}
 	return result
 }
