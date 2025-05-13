@@ -87,7 +87,7 @@ func (ds *DBStorage) UpdateCounterMetric(ctx context.Context, name string, value
 }
 
 func (ds *DBStorage) GetMetric(ctx context.Context, metricType string, metricName string) (string, error) {
-	query := "SELECT * FROM metrics WHERE name=$1 AND m_type=$2"
+	query := "SELECT id, name, m_type, gauge_value, counter_value FROM metrics WHERE name=$1 AND m_type=$2"
 	var err error
 	resRow, err := ds.dbClient.RowQuery(ctx, query, metricName, metricType)
 	if err != nil {
@@ -111,7 +111,7 @@ func (ds *DBStorage) GetMetric(ctx context.Context, metricType string, metricNam
 }
 
 func (ds *DBStorage) GetAllCountersMetrics(ctx context.Context) map[string]int64 {
-	query := "SELECT * FROM metrics WHERE m_type = 'counter'"
+	query := "SELECT id, name, m_type, gauge_value, counter_value FROM metrics WHERE m_type = 'counter'"
 	var result = make(map[string]int64)
 	resRows, err := ds.dbClient.Query(ctx, query)
 	if err != nil {
@@ -136,7 +136,7 @@ func (ds *DBStorage) GetAllCountersMetrics(ctx context.Context) map[string]int64
 }
 
 func (ds *DBStorage) GetAllGaugeMetrics(ctx context.Context) map[string]float64 {
-	query := "SELECT * FROM metrics WHERE m_type = 'gauge'"
+	query := "SELECT id, name, m_type, gauge_value, counter_value FROM metrics WHERE m_type = 'gauge'"
 	var result = make(map[string]float64)
 	resRows, err := ds.dbClient.Query(ctx, query)
 	if err != nil {
