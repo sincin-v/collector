@@ -13,6 +13,8 @@ var (
 	GaugeMetricType   = "gauge"
 )
 
+var OperationTimeout = 5 * time.Second
+
 type Config struct {
 	Host            string `env:"ADDRESS"`
 	StoreInterval   int64  `env:"STORE_INTERVAL"`

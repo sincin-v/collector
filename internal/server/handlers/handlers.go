@@ -119,7 +119,7 @@ func (h Handler) GetMetricHandler(res http.ResponseWriter, req *http.Request) {
 
 func (h Handler) GetAllMetricsHandler(res http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
-	ctxTimeout, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctxTimeout, cancel := context.WithTimeout(ctx, config.OperationTimeout)
 	defer cancel()
 	res.Header().Set("Content-Type", "text/html")
 	if req.Method != http.MethodGet {
@@ -157,7 +157,7 @@ func (h Handler) GetAllMetricsHandler(res http.ResponseWriter, req *http.Request
 
 func (h Handler) UpdateMetricJSONHandler(res http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
-	ctxTimeout, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctxTimeout, cancel := context.WithTimeout(ctx, config.OperationTimeout)
 	defer cancel()
 	if req.Method != http.MethodPost {
 		logger.Log.Errorf("Error: %d", http.StatusMethodNotAllowed)
@@ -234,7 +234,7 @@ func (h Handler) UpdateMetricJSONHandler(res http.ResponseWriter, req *http.Requ
 
 func (h Handler) UpdateManyMetricsJSONHandler(res http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
-	ctxTimeout, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctxTimeout, cancel := context.WithTimeout(ctx, config.OperationTimeout)
 	defer cancel()
 	if req.Method != http.MethodPost {
 		logger.Log.Errorf("[Handler] Error: %d", http.StatusMethodNotAllowed)
@@ -263,7 +263,7 @@ func (h Handler) UpdateManyMetricsJSONHandler(res http.ResponseWriter, req *http
 
 func (h Handler) GetMetricJSONHandler(res http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
-	ctxTimeout, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctxTimeout, cancel := context.WithTimeout(ctx, config.OperationTimeout)
 	defer cancel()
 	if req.Method != http.MethodPost {
 		logger.Log.Errorf("[Handler] Error: %d", http.StatusMethodNotAllowed)
