@@ -12,6 +12,7 @@ type metricStorage interface {
 	GetAllCountersMetrics(context.Context) map[string]int64
 	GetAllGaugeMetrics(context.Context) map[string]float64
 	UpdateMetricsByBatch(context.Context, []models.Metrics) error
+	HealthCheck(context.Context) error
 }
 
 type MetricsService struct {
@@ -41,16 +42,20 @@ func (s MetricsService) GetMetric(ctx context.Context, metricType string, metric
 	return metricValue, err
 }
 
-func (s MetricsService) GetAllMetrics(ctx context.Context, ) (map[string]int64, map[string]float64) {
+func (s MetricsService) GetAllMetrics(ctx context.Context) (map[string]int64, map[string]float64) {
 	counterMetric := s.metricStorage.GetAllCountersMetrics(ctx)
 	gaugeMetrics := s.metricStorage.GetAllGaugeMetrics(ctx)
 	return counterMetric, gaugeMetrics
 }
 
-func (s MetricsService) GetAllCountersMetrics(ctx context.Context, ) map[string]int64 {
+func (s MetricsService) GetAllCountersMetrics(ctx context.Context) map[string]int64 {
 	return s.metricStorage.GetAllCountersMetrics(ctx)
 }
 
-func (s MetricsService) GetAllGaugeMetrics(ctx context.Context, ) map[string]float64 {
+func (s MetricsService) GetAllGaugeMetrics(ctx context.Context) map[string]float64 {
 	return s.metricStorage.GetAllGaugeMetrics(ctx)
+}
+
+func (s MetricsService) HealthCheck(ctx context.Context) error {
+	return s.metricStorage.HealthCheck(ctx)
 }

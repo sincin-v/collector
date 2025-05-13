@@ -170,3 +170,14 @@ func (ds *DBStorage) GetAllGaugeMetrics(ctx context.Context) map[string]float64 
 	}()
 	return result
 }
+
+func (ds *DBStorage) HealthCheck(ctx context.Context) error {
+	result, err := ds.dbClient.Ping(ctx)
+	if err != nil {
+		return err
+	}
+	if !result {
+		return errors.New("[Handler] There is no connect to DB, ping:false")
+	}
+	return nil
+}

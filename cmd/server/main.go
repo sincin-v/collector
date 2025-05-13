@@ -71,7 +71,7 @@ func main() {
 		}()
 	}
 
-	serverRouter, errCreateRouter := router.CreateRouter(&metricService, dbClient)
+	serverRouter, errCreateRouter := router.CreateRouter(&metricService)
 
 	if errCreateRouter != nil {
 		panic(errCreateRouter)

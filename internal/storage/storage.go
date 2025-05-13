@@ -92,3 +92,8 @@ func (ms *MemStorage) GetAllCountersMetrics(_ context.Context) map[string]int64 
 func (ms *MemStorage) GetAllGaugeMetrics(_ context.Context) map[string]float64 {
 	return ms.gauge
 }
+
+func (ms *MemStorage) HealthCheck(ctx context.Context) error {
+	return nil
+}
+

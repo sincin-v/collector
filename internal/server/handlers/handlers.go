@@ -21,21 +21,16 @@ type MetricsService interface {
 	GetMetric(context.Context, string, string) (string, error)
 	GetAllMetrics(context.Context) (map[string]int64, map[string]float64)
 	UpdateMetricsByBatch(context.Context, []models.Metrics) error
-}
-
-type DBClient interface {
-	Ping(ctx context.Context) (bool, error)
+	HealthCheck(context.Context) error
 }
 
 type Handler struct {
 	service  MetricsService
-	dbClient DBClient
 }
 
-func New(s MetricsService, db DBClient) (*Handler, error) {
+func New(s MetricsService) (*Handler, error) {
 	return &Handler{
 		service:  s,
-		dbClient: db,
 	}, nil
 }
 
@@ -321,13 +316,8 @@ func (h Handler) Ping(res http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 	ctxTimeout, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
-	result, err := h.dbClient.Ping(ctxTimeout)
+	err := h.service.HealthCheck(ctxTimeout)
 	if err != nil {
 		logger.Log.Error("[Handler] Ping Error: %s", err)
-	}
-	if !result {
-		logger.Log.Error("[Handler] There is no connect to DB, ping:false")
-		res.WriteHeader(http.StatusInternalServerError)
-		return
 	}
 }

@@ -2,16 +2,15 @@ package router
 
 import (
 	"github.com/go-chi/chi/v5"
-	"github.com/sincin-v/collector/internal/server/clients/db"
 	"github.com/sincin-v/collector/internal/server/handlers"
 	zipMw "github.com/sincin-v/collector/internal/server/middlewares/compressing"
 	logMw "github.com/sincin-v/collector/internal/server/middlewares/logging"
 	"github.com/sincin-v/collector/internal/service"
 )
 
-func CreateRouter(service *service.MetricsService, databaseClient *db.DBClient) (*chi.Mux, error) {
+func CreateRouter(service *service.MetricsService) (*chi.Mux, error) {
 
-	h, err := handlers.New(service, databaseClient)
+	h, err := handlers.New(service)
 	if err != nil {
 		return nil, err
 	}
