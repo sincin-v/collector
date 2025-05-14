@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/sincin-v/collector/internal/logger"
 	"github.com/sincin-v/collector/internal/models"
@@ -306,7 +305,7 @@ func (h Handler) GetMetricJSONHandler(res http.ResponseWriter, req *http.Request
 
 func (h Handler) Ping(res http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
-	ctxTimeout, cancel := context.WithTimeout(ctx, 1*time.Second)
+	ctxTimeout, cancel := context.WithTimeout(ctx, config.OperationTimeout)
 	defer cancel()
 	err := h.service.HealthCheck(ctxTimeout)
 	if err != nil {
