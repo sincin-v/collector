@@ -5,7 +5,7 @@ import (
 	"github.com/sincin-v/collector/internal/models"
 )
 
-type metricStorage interface {
+type MetricStorage interface {
 	UpdateCounterMetric(context.Context, string, int64) error
 	UpdateGaugeMetric(context.Context, string, float64) error
 	GetMetric(context.Context, string, string) (string, error)
@@ -16,10 +16,10 @@ type metricStorage interface {
 }
 
 type MetricsService struct {
-	metricStorage metricStorage
+	metricStorage MetricStorage
 }
 
-func New(s metricStorage) MetricsService {
+func New(s MetricStorage) MetricsService {
 	return MetricsService{
 		metricStorage: s,
 	}

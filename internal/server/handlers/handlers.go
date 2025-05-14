@@ -122,32 +122,24 @@ func (h Handler) GetAllMetricsHandler(res http.ResponseWriter, req *http.Request
 		res.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
-	counterMetric, gaugeMetrics := h.service.GetAllMetrics(ctxTimeout)
-	for metricName := range counterMetric {
-		metricValue, err := h.service.GetMetric(ctxTimeout, config.CounterMetricType, metricName)
-		if err != nil {
-			logger.Log.Errorf("[Handler] Cannot get value of metric '%s' . Error: %s", metricName, err)
-			continue
-		}
-		if _, err := io.WriteString(res, fmt.Sprintf("%s = %s\n", metricName, metricValue)); err != nil {
+	counterMetrics, gaugeMetrics := h.service.GetAllMetrics(ctxTimeout)
+	for metricName := range counterMetrics {
+		metricValue := counterMetrics[metricName]
+		if _, err := io.WriteString(res, fmt.Sprintf("%s = %d\n", metricName, metricValue)); err != nil {
 			logger.Log.Errorf("[Handler] Could not return metrics data Error: %s", err)
 			res.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 	}
 	for metricName := range gaugeMetrics {
-		metricValue, err := h.service.GetMetric(ctxTimeout, config.GaugeMetricType, metricName)
-		if err != nil {
-			logger.Log.Errorf("[Handler] Cannot get value of metric '%s' . Error: %s", metricName, err)
-			continue
-		}
-		if _, err := io.WriteString(res, fmt.Sprintf("%s = %s\n", metricName, metricValue)); err != nil {
+		metricValue := gaugeMetrics[metricName]
+		if _, err := io.WriteString(res, fmt.Sprintf("%s = %f\n", metricName, metricValue)); err != nil {
 			logger.Log.Errorf("Could not return metrics data Error: %s", err)
 			res.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		res.WriteHeader(http.StatusOK)
 	}
+	res.WriteHeader(http.StatusOK)
 }
 
 func (h Handler) UpdateMetricJSONHandler(res http.ResponseWriter, req *http.Request) {
