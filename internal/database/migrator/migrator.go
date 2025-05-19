@@ -8,10 +8,9 @@ import (
 	"github.com/sincin-v/collector/internal/logger"
 )
 
-
 func ApplyMigrations(databaseDSN string, migrationPath string) error {
 	m, err := migrate.New(
-		"file://" +  migrationPath,
+		"file://"+migrationPath,
 		databaseDSN,
 	)
 

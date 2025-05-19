@@ -1,9 +1,9 @@
 package collector
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
-	"context"
 	"fmt"
 	"os"
 	"time"

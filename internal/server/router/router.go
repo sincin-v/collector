@@ -2,13 +2,15 @@ package router
 
 import (
 	"github.com/go-chi/chi/v5"
+	"github.com/sincin-v/collector/internal/server/config"
 	"github.com/sincin-v/collector/internal/server/handlers"
 	zipMw "github.com/sincin-v/collector/internal/server/middlewares/compressing"
+	hash "github.com/sincin-v/collector/internal/server/middlewares/hashChecker"
 	logMw "github.com/sincin-v/collector/internal/server/middlewares/logging"
 	"github.com/sincin-v/collector/internal/service"
 )
 
-func CreateRouter(service *service.MetricsService) (*chi.Mux, error) {
+func CreateRouter(service *service.MetricsService, serverCfg config.Config) (*chi.Mux, error) {
 
 	h, err := handlers.New(service)
 	if err != nil {
@@ -17,6 +19,7 @@ func CreateRouter(service *service.MetricsService) (*chi.Mux, error) {
 	router := chi.NewRouter()
 
 	router.Use(logMw.LoggerMiddleware)
+	router.Use(hash.CheckHashRequest(serverCfg))
 	router.Use(zipMw.CompressMiddleware)
 	router.Post("/updates/", h.UpdateManyMetricsJSONHandler)
 	router.Post("/update/", h.UpdateMetricJSONHandler)

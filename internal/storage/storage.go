@@ -86,14 +86,17 @@ func (ms *MemStorage) GetMetric(_ context.Context, metricType string, metricName
 }
 
 func (ms *MemStorage) GetAllCountersMetrics(_ context.Context) map[string]int64 {
+	ms.mu.Lock()
+	defer ms.mu.Unlock()
 	return ms.counter
 }
 
 func (ms *MemStorage) GetAllGaugeMetrics(_ context.Context) map[string]float64 {
+	ms.mu.Lock()
+	defer ms.mu.Unlock()
 	return ms.gauge
 }
 
 func (ms *MemStorage) HealthCheck(ctx context.Context) error {
 	return nil
 }
-
