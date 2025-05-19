@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/sincin-v/collector/internal/agent/config"
 	"github.com/sincin-v/collector/internal/compress"
 	"github.com/sincin-v/collector/internal/models"
 )
@@ -21,10 +23,10 @@ type MemMetrics struct {
 }
 
 type MetricsService interface {
-	CreateCounterMetric(string, int64)
-	CreateGaugeMetric(string, float64)
-	GetMetric(string, string) (string, error)
-	GetAllMetrics() (map[string]int64, map[string]float64)
+	UpdateCounterMetric(context.Context, string, int64) error
+	UpdateGaugeMetric(context.Context, string, float64) error
+	GetMetric(context.Context, string, string) (string, error)
+	GetAllMetrics(context.Context) (map[string]int64, map[string]float64)
 }
 
 type HTTPClient interface {
@@ -41,17 +43,19 @@ func New(s MetricsService, hc HTTPClient) Collector {
 	return Collector{service: s, httpClient: hc, memStatsMetric: make(map[string]float64)}
 }
 
-func (c Collector) StartCollectMetrics(pollInterval time.Duration) {
+func (c Collector) StartCollectMetrics(ctx context.Context, pollInterval time.Duration) {
 	for {
-		c.CollectMetrics()
+		c.CollectMetrics(ctx)
 		time.Sleep(pollInterval)
 	}
 }
 
 func (c Collector) StartSendMetrics(reportInterval time.Duration) {
+	ctx := context.Background()
 	for {
 		time.Sleep(reportInterval)
-		c.SendMetrics()
+		// c.SendMetrics()
+		c.SendMetricsJSON(ctx)
 	}
 }
 
@@ -89,26 +93,90 @@ func (c *Collector) GetMetricsFromMemStats() {
 	}
 }
 
-func (c Collector) CollectMetrics() {
+func (c Collector) CollectMetrics(ctx context.Context) {
 
 	log.Printf("Start collect metrics")
 	c.GetMetricsFromMemStats()
-
+	var err error
 	for metricName := range c.memStatsMetric {
 		metricValue := c.memStatsMetric[metricName]
 		log.Printf("Filed %s, value %v", metricName, metricValue)
-		c.service.CreateGaugeMetric(metricName, metricValue)
+		if errLoopMetric := c.service.UpdateGaugeMetric(ctx, metricName, metricValue); errLoopMetric != nil {
+			err = errors.Join(err, fmt.Errorf("update metric %s error: %w", metricName, errLoopMetric))
+		}
+
 	}
 
-	c.service.CreateCounterMetric("PollCount", 1)
-	c.service.CreateGaugeMetric("RandomValue", rand.Float64())
-
+	if errCounterMetric := c.service.UpdateCounterMetric(ctx, "PollCount", 1); errCounterMetric != nil {
+		err = errors.Join(err, fmt.Errorf("update metric PollCount error: %w", errCounterMetric))
+	}
+	if errGaugeMetric := c.service.UpdateGaugeMetric(ctx, "RandomValue", rand.Float64()); errGaugeMetric != nil {
+		err = errors.Join(err, fmt.Errorf("update metric RandomValue error: %w", errGaugeMetric))
+	}
+	if err != nil {
+		log.Printf("Update finish with error:  %s", err)
+	}
 	log.Printf("Finish collect metrics")
 }
 
-func (c Collector) SendMetrics() {
+func (c Collector) SendMetricsJSON(ctx context.Context) {
+	log.Printf("Start send metrics")
+	counterMetrics, gaugeMetrics := c.service.GetAllMetrics(ctx)
+	var methodURL = "/updates/"
+	var metricsArr []models.Metrics
+
+	for metricName := range gaugeMetrics {
+		metricValue := gaugeMetrics[metricName]
+
+		metricObj := models.Metrics{
+			ID:    metricName,
+			MType: config.GaugeMetricType,
+			Value: &metricValue,
+		}
+		metricsArr = append(metricsArr, metricObj)
+	}
+	for metricName := range counterMetrics {
+		metricValue := counterMetrics[metricName]
+
+		metricObj := models.Metrics{
+			ID:    metricName,
+			MType: config.CounterMetricType,
+			Delta: &metricValue,
+		}
+		metricsArr = append(metricsArr, metricObj)
+	}
+
+	sendObj := metricsArr // models.MetricsArray{Metrics: metricsArr}
+
+	var buf bytes.Buffer
+	encoder := json.NewEncoder(&buf)
+	errEncode := encoder.Encode(sendObj)
+	if errEncode != nil {
+		log.Printf("Cannot encode data err: %s", errEncode)
+		return
+	}
+
+	sendData, errCompress := compress.Compress(buf)
+	if errCompress != nil {
+		log.Printf("Cannot compress data of metrics")
+		return
+	}
+	log.Printf("SEND DATA")
+	res, err := c.httpClient.SendPostRequest(methodURL, *sendData)
+	if err != nil {
+		log.Printf("Cannot send request to server to set metrics Error: %s", err)
+		return
+	}
+	defer func() {
+		if errBodyClose := res.Body.Close(); errBodyClose != nil {
+			err = errors.Join(err, fmt.Errorf("close body error: %w", errBodyClose))
+		}
+	}()
+}
+
+func (c Collector) SendMetrics(ctx context.Context) {
 	log.Printf("Send metric")
-	counterMetrics, gaugeMetrics := c.service.GetAllMetrics()
+	counterMetrics, gaugeMetrics := c.service.GetAllMetrics(ctx)
 	var methodURL = "/update/"
 
 	for metricName := range gaugeMetrics {
@@ -116,7 +184,7 @@ func (c Collector) SendMetrics() {
 		log.Printf("Send metric %s", metricName)
 		metricData := models.Metrics{
 			ID:    metricName,
-			MType: "gauge",
+			MType: config.GaugeMetricType,
 			Value: &metricValue,
 		}
 
@@ -151,7 +219,7 @@ func (c Collector) SendMetrics() {
 		log.Printf("Send metric %s", metricName)
 		metricData := models.Metrics{
 			ID:    metricName,
-			MType: "counter",
+			MType: config.CounterMetricType,
 			Delta: &metricValue,
 		}
 		var buf bytes.Buffer

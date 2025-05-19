@@ -1,12 +1,16 @@
 package handlers
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 
+	"github.com/golang/mock/gomock"
 	"github.com/sincin-v/collector/internal/logger"
+	"github.com/sincin-v/collector/internal/server/config"
 	"github.com/sincin-v/collector/internal/service"
 	"github.com/sincin-v/collector/internal/storage"
 )
@@ -19,7 +23,8 @@ func TestHandler_UpdateMetricHandler(t *testing.T) {
 		httpMethod  string
 	}
 	type want struct {
-		code int
+		code        int
+		metricValue string
 	}
 	tests := []struct {
 		name string
@@ -29,49 +34,53 @@ func TestHandler_UpdateMetricHandler(t *testing.T) {
 		{
 			name: "positive test update counter metric handler",
 			args: args{
-				metricType:  "counter",
+				metricType:  config.CounterMetricType,
 				metricName:  "testCounterMetric",
 				metricValue: "1",
 				httpMethod:  http.MethodPost,
 			},
 			want: want{
-				code: http.StatusOK,
+				code:        http.StatusOK,
+				metricValue: "1",
 			},
 		},
 		{
 			name: "positive test update gauge metric handler",
 			args: args{
-				metricType:  "gauge",
+				metricType:  config.GaugeMetricType,
 				metricName:  "testGaugeMetric",
 				metricValue: "1.0",
 				httpMethod:  http.MethodPost,
 			},
 			want: want{
-				code: http.StatusOK,
+				code:        http.StatusOK,
+				metricValue: "1.0",
 			},
 		},
 		{
 			name: "negative test update gauge metric handler with invalid type",
 			args: args{
-				metricType:  "counter",
+				metricType:  config.CounterMetricType,
 				metricName:  "testGaugeMetric",
 				metricValue: "1.0",
 				httpMethod:  http.MethodPost,
 			},
 			want: want{
-				code: http.StatusBadRequest,
+				code:        http.StatusBadRequest,
+				metricValue: "1.0",
 			},
 		},
 		{
 			name: "negative test update metric handler with invalid value",
 			args: args{
-				metricType:  "gauge",
+				metricType:  config.GaugeMetricType,
 				metricName:  "testGaugeMetric",
 				metricValue: "invalidValue",
 				httpMethod:  http.MethodPost,
 			},
 			want: want{
-				code: http.StatusBadRequest,
+				code:        http.StatusBadRequest,
+				metricValue: "1.0",
 			},
 		},
 		{
@@ -83,7 +92,8 @@ func TestHandler_UpdateMetricHandler(t *testing.T) {
 				httpMethod:  http.MethodPost,
 			},
 			want: want{
-				code: http.StatusBadRequest,
+				code:        http.StatusBadRequest,
+				metricValue: "1.0",
 			},
 		},
 		{
@@ -95,7 +105,8 @@ func TestHandler_UpdateMetricHandler(t *testing.T) {
 				httpMethod:  http.MethodGet,
 			},
 			want: want{
-				code: http.StatusMethodNotAllowed,
+				code:        http.StatusMethodNotAllowed,
+				metricValue: "1.0",
 			},
 		},
 	}
@@ -104,9 +115,28 @@ func TestHandler_UpdateMetricHandler(t *testing.T) {
 			if err := logger.Initialize("INFO"); err != nil {
 				t.Errorf("Could not initialize logger Error: %s", err)
 			}
-			s := storage.New()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			s := storage.NewMockMetricStorage(ctrl)
+			ctxt := context.Background()
+
+			switch tt.args.metricType {
+			case config.CounterMetricType:
+				metricValue, errParseInt := strconv.ParseInt(tt.args.metricValue, 10, 64)
+				if errParseInt == nil {
+					s.EXPECT().UpdateCounterMetric(ctxt, tt.args.metricName, metricValue).Return(nil)
+					s.EXPECT().GetMetric(ctxt, tt.args.metricType, tt.args.metricName).Return(tt.want.metricValue, nil)
+				}
+			case config.GaugeMetricType:
+				metricValue, errParseFloat := strconv.ParseFloat(tt.args.metricValue, 64)
+				if errParseFloat == nil {
+					s.EXPECT().UpdateGaugeMetric(ctxt, tt.args.metricName, metricValue).Return(nil)
+					s.EXPECT().GetMetric(ctxt, tt.args.metricType, tt.args.metricName).Return(tt.want.metricValue, nil)
+				}
+			}
+
 			h := &Handler{
-				service: service.New(&s),
+				service: service.New(s),
 			}
 
 			url := fmt.Sprintf("/update/%s/%s/%s", tt.args.metricType, tt.args.metricName, tt.args.metricValue)
@@ -143,7 +173,8 @@ func TestHandler_GetMetricHandler(t *testing.T) {
 		httpMethod string
 	}
 	type want struct {
-		code int
+		code        int
+		metricValue string
 	}
 	tests := []struct {
 		name   string
@@ -153,26 +184,28 @@ func TestHandler_GetMetricHandler(t *testing.T) {
 	}{
 		{
 			name:   "positive test get counter metric handler",
-			fields: fields{"counter", "testCounterMetric", 1},
+			fields: fields{config.CounterMetricType, "testCounterMetric", 1},
 			args: args{
-				metricType: "counter",
+				metricType: config.CounterMetricType,
 				metricName: "testCounterMetric",
 				httpMethod: http.MethodGet,
 			},
 			want: want{
-				code: http.StatusOK,
+				code:        http.StatusOK,
+				metricValue: "1",
 			},
 		},
 		{
 			name:   "negative test invalid method",
-			fields: fields{"counter", "testCounterMetric", 1},
+			fields: fields{config.CounterMetricType, "testCounterMetric", 1},
 			args: args{
 				metricType: "histogram",
 				metricName: "testHistogramMetric",
 				httpMethod: http.MethodPost,
 			},
 			want: want{
-				code: http.StatusMethodNotAllowed,
+				code:        http.StatusMethodNotAllowed,
+				metricValue: "1",
 			},
 		},
 	}
@@ -181,9 +214,15 @@ func TestHandler_GetMetricHandler(t *testing.T) {
 			if err := logger.Initialize("INFO"); err != nil {
 				t.Errorf("Could not initialize logger Error: %s", err)
 			}
-			storage := storage.New()
-			service := service.New(&storage)
-			service.CreateCounterMetric(tt.fields.metricName, tt.fields.metricValue)
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			storage := storage.NewMockMetricStorage(ctrl)
+			ctxt := context.Background()
+			if tt.want.code == http.StatusOK {
+				storage.EXPECT().GetMetric(ctxt, tt.args.metricType, tt.args.metricName).Return(tt.want.metricValue, nil)
+			}
+			service := service.New(storage)
 			h := &Handler{
 				service: service,
 			}
@@ -230,7 +269,7 @@ func TestHandler_GetAllMetricsHandler(t *testing.T) {
 	}{
 		{
 			name:   "positive test get all counter metric handler",
-			fields: fields{"testCounterMetric", 1, "testGaugeMetric", 1.0},
+			fields: fields{"testCounterMetric", 1, "testGaugeMetric", 1.1},
 			args: args{
 				httpMethod: http.MethodGet,
 			},
@@ -255,11 +294,15 @@ func TestHandler_GetAllMetricsHandler(t *testing.T) {
 			if err := logger.Initialize("INFO"); err != nil {
 				t.Errorf("Could not initialize logger Error: %s", err)
 			}
-			storage := storage.New()
-			service := service.New(&storage)
-			service.CreateCounterMetric(tt.fields.counterMetricName, tt.fields.counterMetricValue)
-			service.CreateGaugeMetric(tt.fields.gaugeMetricName, tt.fields.gaugeMetricValue)
-			// service.CreateMetric(tt.fields.metricType, tt.fields.metricName, tt.fields.metricValue)
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			storage := storage.NewMockMetricStorage(ctrl)
+			if tt.want.code == http.StatusOK {
+				storage.EXPECT().GetAllCountersMetrics(gomock.Any()).Return(map[string]int64{tt.fields.counterMetricName: tt.fields.counterMetricValue})
+				storage.EXPECT().GetAllGaugeMetrics(gomock.Any()).Return(map[string]float64{tt.fields.gaugeMetricName: tt.fields.gaugeMetricValue})
+			}
+
+			service := service.New(storage)
 			h := &Handler{
 				service: service,
 			}

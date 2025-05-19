@@ -2,7 +2,9 @@ package service
 
 import (
 	"testing"
+	"context"
 
+	"github.com/sincin-v/collector/internal/server/config"
 	"github.com/sincin-v/collector/internal/storage"
 )
 
@@ -25,26 +27,28 @@ func TestMetricsService_GetMetric(t *testing.T) {
 	}{
 		{
 			name:   "positive get counter metric",
-			fields: fields{"counter", "testCounterMetric", 1},
-			args:   args{"counter", "testCounterMetric"},
+			fields: fields{config.CounterMetricType, "testCounterMetric", 1},
+			args:   args{config.CounterMetricType, "testCounterMetric"},
 			want:   "1",
 		},
 		{
 			name:    "negative get counter metric",
-			fields:  fields{"counter", "testCounterMetric", 1},
-			args:    args{"counter", "testInvalidCounterMetric"},
+			fields:  fields{config.CounterMetricType, "testCounterMetric", 1},
+			args:    args{config.CounterMetricType, "testInvalidCounterMetric"},
 			want:    "",
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			st := storage.New()
+			st := storage.NewMemStorage()
 			s := MetricsService{
 				metricStorage: &st,
 			}
-			s.CreateCounterMetric(tt.fields.metricName, tt.fields.metricValue)
-			got, err := s.GetMetric(tt.args.metricType, tt.args.metricName)
+			ctx := context.Background()
+
+			_ = s.UpdateCounterMetric(ctx, tt.fields.metricName, tt.fields.metricValue)
+			got, err := s.GetMetric(ctx, tt.args.metricType, tt.args.metricName)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("MetricsService.GetMetric() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -79,18 +83,19 @@ func TestMetricsService_GetAllMetrics(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			st := storage.New()
+			st := storage.NewMemStorage()
 			s := MetricsService{
 				metricStorage: &st,
 			}
+			ctx := context.Background()
 			for gaugeMetricName := range tt.fields.gaugeMetrics {
-				s.CreateGaugeMetric(gaugeMetricName, tt.fields.gaugeMetrics[gaugeMetricName])
+				_ = s.UpdateGaugeMetric(ctx, gaugeMetricName, tt.fields.gaugeMetrics[gaugeMetricName])
 			}
 			for counterMetricName := range tt.fields.counterMetrics {
-				s.CreateCounterMetric(counterMetricName, tt.fields.counterMetrics[counterMetricName])
+				_ = s.UpdateCounterMetric(ctx, counterMetricName, tt.fields.counterMetrics[counterMetricName])
 			}
 
-			got, got1 := s.GetAllMetrics()
+			got, got1 := s.GetAllMetrics(ctx)
 
 			for counterMetricName := range tt.want {
 				if tt.want[counterMetricName] != got[counterMetricName] {
@@ -106,7 +111,7 @@ func TestMetricsService_GetAllMetrics(t *testing.T) {
 	}
 }
 
-func TestMetricsService_CreateGaugeMetric(t *testing.T) {
+func TestMetricsService_UpdateGaugeMetric(t *testing.T) {
 	type args struct {
 		metricName string
 		value      float64
@@ -125,12 +130,17 @@ func TestMetricsService_CreateGaugeMetric(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			st := storage.New()
+			st := storage.NewMemStorage()
 			s := MetricsService{
 				metricStorage: &st,
 			}
-			s.CreateGaugeMetric(tt.args.metricName, tt.args.value)
-			got, _ := s.GetMetric("gauge", tt.args.metricName)
+			ctx := context.Background()
+
+			err := s.UpdateGaugeMetric(ctx, tt.args.metricName, tt.args.value)
+			if err != nil {
+				t.Errorf("MetricsService.UpdateGaugeMetric()  Error: %s", err)
+			}
+			got, _ := s.GetMetric(ctx, config.GaugeMetricType, tt.args.metricName)
 			if got != tt.want {
 				t.Errorf("MetricsService.GetMetric() = %v, want %v", got, tt.want)
 			}
@@ -138,7 +148,7 @@ func TestMetricsService_CreateGaugeMetric(t *testing.T) {
 	}
 }
 
-func TestMetricsService_CreateCounterMetric(t *testing.T) {
+func TestMetricsService_UpdateCounterMetric(t *testing.T) {
 	type args struct {
 		metricName string
 		value      int64
@@ -157,12 +167,17 @@ func TestMetricsService_CreateCounterMetric(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			st := storage.New()
+			st := storage.NewMemStorage()
 			s := MetricsService{
 				metricStorage: &st,
 			}
-			s.CreateCounterMetric(tt.args.metricName, tt.args.value)
-			got, _ := s.GetMetric("counter", tt.args.metricName)
+			ctx := context.Background()
+
+			err := s.UpdateCounterMetric(ctx, tt.args.metricName, tt.args.value)
+			if err != nil {
+				t.Errorf("MetricsService.UpdateCounterMetric()  Error: %s", err)
+			}
+			got, _ := s.GetMetric(ctx, config.CounterMetricType, tt.args.metricName)
 			if got != tt.want {
 				t.Errorf("MetricsService.GetMetric() = %v, want %v", got, tt.want)
 			}

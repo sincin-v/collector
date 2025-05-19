@@ -6,3 +6,20 @@ type Metrics struct {
 	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
 	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
 }
+
+type MetricsArray struct {
+	Metrics []Metrics `json:"metrics"`
+}
+
+type RestoredDataModel struct {
+	Counter map[string]int64   `json:"counter"`
+	Gauge   map[string]float64 `json:"gauge"`
+}
+
+type DBMetricModel struct {
+	ID           *int
+	Name         *string
+	MType        *string
+	GaugeValue   *float64
+	CounterValue *int64
+}

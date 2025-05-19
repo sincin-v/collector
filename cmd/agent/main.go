@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"time"
 
 	"github.com/sincin-v/collector/internal/agent/clients/rest"
@@ -21,15 +22,16 @@ func main() {
 	if logErr != nil {
 		panic(logErr)
 	}
+	ctx := context.Background()
 	logger.Log.Info("Start agent work")
 	logger.Log.Info("Send metrics to %s", agentConfig.ServerHost)
-	memStorage := storage.New()
+	memStorage := storage.NewMemStorage()
 	service := service.New(&memStorage)
-	hc := rest.New(agentConfig.ServerHost)
+	hc := rest.New(agentConfig.ServerHost, agentConfig.RetryIntervals)
 	metricsCollector := metrics.New(&service, hc)
 	go metricsCollector.StartSendMetrics(agentConfig.ReportInterval)
 	for {
-		go metricsCollector.CollectMetrics()
+		go metricsCollector.CollectMetrics(ctx)
 
 		time.Sleep(agentConfig.PollInterval)
 	}

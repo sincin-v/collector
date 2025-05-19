@@ -8,17 +8,23 @@ import (
 	"github.com/sincin-v/collector/internal/service"
 )
 
-func CreateRouter(service *service.MetricsService) *chi.Mux {
-	h := handlers.New(service)
+func CreateRouter(service *service.MetricsService) (*chi.Mux, error) {
+
+	h, err := handlers.New(service)
+	if err != nil {
+		return nil, err
+	}
 	router := chi.NewRouter()
 
 	router.Use(logMw.LoggerMiddleware)
 	router.Use(zipMw.CompressMiddleware)
+	router.Post("/updates/", h.UpdateManyMetricsJSONHandler)
 	router.Post("/update/", h.UpdateMetricJSONHandler)
 	router.Post("/update/{metricType}/{metricName}/{metricValue}", h.UpdateMetricHandler)
 	router.Post("/value/", h.GetMetricJSONHandler)
 	router.Get("/value/{metricType}/{metricName}", h.GetMetricHandler)
+	router.Get("/ping", h.Ping)
 	router.Get("/", h.GetAllMetricsHandler)
 
-	return router
+	return router, nil
 }

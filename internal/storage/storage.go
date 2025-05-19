@@ -1,17 +1,15 @@
 package storage
 
 import (
-	"encoding/json"
+	"context"
+	"errors"
 	"fmt"
-	"os"
 	"strconv"
 	"sync"
-)
 
-type RestoredDataModel struct {
-	Counter map[string]int64   `json:"counter"`
-	Gauge   map[string]float64 `json:"gauge"`
-}
+	"github.com/sincin-v/collector/internal/models"
+	"github.com/sincin-v/collector/internal/server/config"
+)
 
 type MemStorage struct {
 	mu      sync.RWMutex
@@ -19,45 +17,67 @@ type MemStorage struct {
 	counter map[string]int64
 }
 
-func New() MemStorage {
+func NewMemStorage() MemStorage {
 	return MemStorage{
 		gauge:   map[string]float64{},
 		counter: map[string]int64{},
 	}
 }
+func (ms *MemStorage) UpdateMetricsByBatch(_ context.Context, metrics []models.Metrics) error {
 
-func (ms *MemStorage) CreateGaugeMetric(name string, value float64) {
+	ms.mu.Lock()
+	defer ms.mu.Unlock()
+	for _, metricObj := range metrics {
+		switch metricObj.MType {
+		case config.GaugeMetricType:
+			ms.gauge[metricObj.ID] = *metricObj.Value
+		case config.CounterMetricType:
+			_, ok := ms.counter[metricObj.ID]
+			if !ok {
+				ms.counter[metricObj.ID] = *metricObj.Delta
+				continue
+			}
+			ms.counter[metricObj.ID] += *metricObj.Delta
+		default:
+			continue
+		}
+	}
+	return nil
+}
+
+func (ms *MemStorage) UpdateGaugeMetric(_ context.Context, name string, value float64) error {
 	ms.mu.Lock()
 	ms.gauge[name] = value
 	ms.mu.Unlock()
+	return nil
 }
 
-func (ms *MemStorage) CreateCounterMetric(name string, value int64) {
+func (ms *MemStorage) UpdateCounterMetric(_ context.Context, name string, value int64) error {
 	ms.mu.Lock()
 	defer ms.mu.Unlock()
 	_, ok := ms.counter[name]
 	if !ok {
 		ms.counter[name] = value
-		return
+		return nil
 	}
 	ms.counter[name] += value
-
+	return nil
 }
 
-func (ms *MemStorage) GetMetric(metricType string, metricName string) (string, error) {
+func (ms *MemStorage) GetMetric(_ context.Context, metricType string, metricName string) (string, error) {
 	ms.mu.Lock()
 	defer ms.mu.Unlock()
 	switch metricType {
-	case "gauge":
+	case config.GaugeMetricType:
 		value, ok := ms.gauge[metricName]
 		if !ok {
-			return "", fmt.Errorf("there is no gauge metric %s", metricName)
+			return "", errors.New("metric does not exists")
 		}
 		return strconv.FormatFloat(value, 'f', -1, 64), nil
-	case "counter":
+	case config.CounterMetricType:
 		value, ok := ms.counter[metricName]
 		if !ok {
-			return "", fmt.Errorf("there is no counter metric %s", metricName)
+			return "", errors.New("metric does not exists")
 		}
 		return fmt.Sprintf("%d", value), nil
 	default:
@@ -65,38 +85,15 @@ func (ms *MemStorage) GetMetric(metricType string, metricName string) (string, e
 	}
 }
 
-func (ms *MemStorage) GetAllCountersMetrics() map[string]int64 {
+func (ms *MemStorage) GetAllCountersMetrics(_ context.Context) map[string]int64 {
 	return ms.counter
 }
 
-func (ms *MemStorage) GetAllGaugeMetrics() map[string]float64 {
+func (ms *MemStorage) GetAllGaugeMetrics(_ context.Context) map[string]float64 {
 	return ms.gauge
 }
 
-func (ms *MemStorage) FlushAllMetrics(path string) error {
-
-	metricsMap := map[string]interface{}{"counter": ms.counter, "gauge": ms.gauge}
-
-	resultData, errJSON := json.MarshalIndent(metricsMap, "", "   ")
-	if errJSON != nil {
-		return errJSON
-	}
-	return os.WriteFile(path, resultData, 0666)
-}
-
-func (ms *MemStorage) DumpAllMetrics(path string) error {
-
-	savedData, errOpenFile := os.ReadFile(path)
-	if errOpenFile != nil {
-		return errOpenFile
-	}
-	metricsData := RestoredDataModel{}
-	if err := json.Unmarshal(savedData, &metricsData); err != nil {
-		return err
-	}
-
-	ms.counter = metricsData.Counter
-	ms.gauge = metricsData.Gauge
-
+func (ms *MemStorage) HealthCheck(ctx context.Context) error {
 	return nil
 }
+

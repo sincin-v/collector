@@ -6,8 +6,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/sincin-v/collector/internal/models"
+	"github.com/sincin-v/collector/internal/server/config"
 )
 
 func TestHttpClient_SendPostRequest(t *testing.T) {
@@ -26,7 +28,7 @@ func TestHttpClient_SendPostRequest(t *testing.T) {
 	}{
 		{
 			name: "positive test send request",
-			args: args{"TestMetric", "counter", 1, http.StatusOK},
+			args: args{"TestMetric", config.CounterMetricType, 1, http.StatusOK},
 			want: http.StatusOK,
 		},
 	}
@@ -37,7 +39,8 @@ func TestHttpClient_SendPostRequest(t *testing.T) {
 			}))
 			defer ts.Close()
 			h := HTTPClient{
-				baseURL: ts.URL,
+				baseURL:        ts.URL,
+				retryIntervals: []time.Duration{1 * time.Second, 3 * time.Second, 5 * time.Second},
 			}
 
 			metricData := models.Metrics{

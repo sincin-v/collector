@@ -4,9 +4,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"context"
 	"testing"
+	"time"
 
 	"github.com/sincin-v/collector/internal/agent/clients/rest"
+	"github.com/sincin-v/collector/internal/agent/config"
 	"github.com/sincin-v/collector/internal/service"
 	"github.com/sincin-v/collector/internal/storage"
 )
@@ -25,18 +28,19 @@ func TestCollector_CollectMetrics(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			st := storage.New()
+			ctx := context.Background()
+			st := storage.NewMemStorage()
 			s := service.New(&st)
 
-			hs := rest.New("localhost:8888")
+			hs := rest.New("localhost:8888", []time.Duration{1 * time.Second, 3 * time.Second, 5 * time.Second})
 
 			c := Collector{
 				service:    s,
 				httpClient: hs,
 			}
-			c.CollectMetrics()
+			c.CollectMetrics(ctx)
 
-			if gotValue, err := c.service.GetMetric("counter", "PollCount"); gotValue != tt.wantValue || err != nil {
+			if gotValue, err := c.service.GetMetric(ctx, config.CounterMetricType, "PollCount"); gotValue != tt.wantValue || err != nil {
 				t.Errorf("PollCount (%s) are not  eq %s", gotValue, tt.wantValue)
 
 			}
@@ -78,19 +82,20 @@ func TestCollector_SendMetrics(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			}))
 			defer ts.Close()
-			st := storage.New()
-			st.CreateCounterMetric(tt.fields.countMetricName, tt.fields.countMetricValue)
-			st.CreateGaugeMetric(tt.fields.gaugeMetricName, tt.fields.gaugeMetricValue)
+			st := storage.NewMemStorage()
+			ctx := context.Background()
+			_ = st.UpdateCounterMetric(ctx, tt.fields.countMetricName, tt.fields.countMetricValue)
+			_ = st.UpdateGaugeMetric(ctx, tt.fields.gaugeMetricName, tt.fields.gaugeMetricValue)
 			s := service.New(&st)
 
-			hs := rest.New(ts.URL)
+			hs := rest.New(ts.URL, []time.Duration{1 * time.Second, 3 * time.Second, 5 * time.Second})
 
 			c := Collector{
 				service:    s,
 				httpClient: hs,
 			}
 
-			c.SendMetrics()
+			c.SendMetrics(ctx)
 		})
 	}
 }

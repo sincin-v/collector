@@ -1,14 +1,17 @@
 package main
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/sincin-v/collector/internal/logger"
+	"github.com/sincin-v/collector/internal/server/clients/db"
 	"github.com/sincin-v/collector/internal/server/collector"
 	"github.com/sincin-v/collector/internal/server/config"
 	"github.com/sincin-v/collector/internal/server/router"
 	"github.com/sincin-v/collector/internal/service"
 	"github.com/sincin-v/collector/internal/storage"
+	"github.com/sincin-v/collector/internal/database/migrator"
 )
 
 func main() {
@@ -25,27 +28,54 @@ func main() {
 
 	logger.Log.Infof("Start server work on %s", serverConfig.Host)
 
-	memStorage := storage.New()
-	metricService := service.New(&memStorage)
-	metricCollector := collector.New(metricService, serverConfig.FileStoragePath)
+	var baseCtx = context.Background()
 
-	if serverConfig.Restore {
-		err := metricCollector.RestoreMetrics()
+	var metricService service.MetricsService
+	var dbClient *db.DBClient
+	var err error
+
+	if serverConfig.DBDns != "" {
+		dbClient, err = db.New(serverConfig.DBDns, serverConfig.RetryIntervals)
 		if err != nil {
-			logger.Log.Warnf("Cannot restore metrics from %s", serverConfig.FileStoragePath)
+			logger.Log.Panic("Error connect to DB %s Error: %s", serverConfig.DBDns, err)
 		}
+
+		migrateErr := migrator.ApplyMigrations(serverConfig.DBDns, serverConfig.MigrationPath)
+		if migrateErr != nil {
+			logger.Log.Panic(migrateErr)
+		}
+		storage := storage.NewDBStorage(baseCtx, *dbClient)
+		metricService = service.New(storage)
+
+		defer dbClient.Close()
+	} else {
+		storage := storage.NewMemStorage()
+		metricService = service.New(&storage)
+
+		metricCollector := collector.New(metricService, serverConfig.FileStoragePath)
+
+		if serverConfig.Restore {
+			err := metricCollector.RestoreMetrics(baseCtx)
+			if err != nil {
+				logger.Log.Warnf("Cannot restore metrics from %s", serverConfig.FileStoragePath)
+			}
+		}
+
+		var errSaveMetric error
+
+		go func() {
+			errSaveMetric = metricCollector.SaveMetrics(baseCtx, int(serverConfig.StoreInterval))
+			if errSaveMetric != nil {
+				logger.Log.Error("Error save metric: %s", errSaveMetric)
+			}
+		}()
 	}
 
-	var errSaveMetric error
+	serverRouter, errCreateRouter := router.CreateRouter(&metricService)
 
-	go func() {
-		errSaveMetric = metricCollector.SaveMetrics(int(serverConfig.StoreInterval))
-		if errSaveMetric != nil {
-			logger.Log.Error("Error save metric: %s", errSaveMetric)
-		}
-	}()
-
-	serverRouter := router.CreateRouter(&metricService)
+	if errCreateRouter != nil {
+		panic(errCreateRouter)
+	}
 
 	httpErr := http.ListenAndServe(serverConfig.Host, serverRouter)
 	if httpErr != nil {
