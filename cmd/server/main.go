@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/sincin-v/collector/internal/database/migrator"
 	"github.com/sincin-v/collector/internal/logger"
 	"github.com/sincin-v/collector/internal/server/clients/db"
 	"github.com/sincin-v/collector/internal/server/collector"
@@ -11,7 +12,6 @@ import (
 	"github.com/sincin-v/collector/internal/server/router"
 	"github.com/sincin-v/collector/internal/service"
 	"github.com/sincin-v/collector/internal/storage"
-	"github.com/sincin-v/collector/internal/database/migrator"
 )
 
 func main() {
@@ -71,7 +71,7 @@ func main() {
 		}()
 	}
 
-	serverRouter, errCreateRouter := router.CreateRouter(&metricService)
+	serverRouter, errCreateRouter := router.CreateRouter(&metricService, *serverConfig)
 
 	if errCreateRouter != nil {
 		panic(errCreateRouter)

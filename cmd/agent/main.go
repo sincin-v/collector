@@ -27,7 +27,7 @@ func main() {
 	logger.Log.Info("Send metrics to %s", agentConfig.ServerHost)
 	memStorage := storage.NewMemStorage()
 	service := service.New(&memStorage)
-	hc := rest.New(agentConfig.ServerHost, agentConfig.RetryIntervals)
+	hc := rest.New(agentConfig.ServerHost, agentConfig.RetryIntervals, agentConfig.SecretKey)
 	metricsCollector := metrics.New(&service, hc)
 	go metricsCollector.StartSendMetrics(agentConfig.ReportInterval)
 	for {

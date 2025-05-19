@@ -19,12 +19,14 @@ type Config struct {
 	PollInterval   time.Duration   `env:"POLL_INTERVAL"`
 	LogLevel       string          `env:"LOG_LEVEL" envDefault:"INFO"`
 	RetryIntervals []time.Duration `env:"RETRY_INTERVALS" envSeparator:"," envDefault:"1s,3s,5s"`
+	SecretKey      string          `env:"KEY"`
 }
 
 func GetAgentConfig() (*Config, error) {
 	cfg := &Config{}
 
 	flag.StringVar(&cfg.ServerHost, "a", "localhost:8080", "Metric server host and port")
+	flag.StringVar(&cfg.SecretKey, "k", "", "secret key")
 	var argReportInterval = flag.Int("r", 10, "Report interval")
 	var argPollInterval = flag.Int("p", 2, "Poll interval")
 
