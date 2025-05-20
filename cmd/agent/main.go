@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/sincin-v/collector/internal/agent/clients/rest"
@@ -11,6 +12,15 @@ import (
 	"github.com/sincin-v/collector/internal/service"
 	"github.com/sincin-v/collector/internal/storage"
 )
+
+func worker(ctx context.Context, tasksChan chan int, wg *sync.WaitGroup, mc metrics.Collector) {
+	defer wg.Done()
+	for task := range tasksChan {
+		logger.Log.Info("Send metrics from task %d", task)
+		mc.SendMetricsJSON(ctx)
+		<-tasksChan
+	}
+}
 
 func main() {
 
@@ -29,10 +39,49 @@ func main() {
 	service := service.New(&memStorage)
 	hc := rest.New(agentConfig.ServerHost, agentConfig.RetryIntervals, agentConfig.SecretKey)
 	metricsCollector := metrics.New(&service, hc)
-	go metricsCollector.StartSendMetrics(agentConfig.ReportInterval)
-	for {
-		go metricsCollector.CollectMetrics(ctx)
 
-		time.Sleep(agentConfig.PollInterval)
+	pollTiker := time.NewTicker(agentConfig.PollInterval)
+	reportTiker := time.NewTicker(agentConfig.ReportInterval)
+	if agentConfig.RateLimit == 0 {
+		for {
+			select {
+			case <-pollTiker.C:
+				metricsCollector.CollectMetrics(ctx)
+			case <-reportTiker.C:
+				metricsCollector.SendMetricsJSON(ctx)
+			}
+		}
+	} else {
+		for {
+			var mu sync.Mutex
+			var wg sync.WaitGroup
+			tasksChan := make(chan int, int(agentConfig.RateLimit))
+			for i := 0; i < int(agentConfig.RateLimit); i++ {
+				wg.Add(1)
+				mu.Lock()
+				go worker(ctx, tasksChan, &wg, metricsCollector)
+				mu.Unlock()
+			}
+
+			go func() {
+				for {
+					mu.Lock()
+					metricsCollector.CollectMetrics(ctx)
+					time.Sleep(agentConfig.PollInterval)
+					tasksChan <- 1
+					mu.Unlock()
+				}
+			}()
+			go func() {
+				for {
+					mu.Lock()
+					metricsCollector.CollectUtilizationMetric(ctx)
+					time.Sleep(agentConfig.PollInterval)
+					tasksChan <- 1
+					mu.Unlock()
+				}
+			}()
+			wg.Wait()
+		}
 	}
 }
