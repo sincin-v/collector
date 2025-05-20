@@ -53,32 +53,27 @@ func main() {
 		}
 	} else {
 		for {
-			var mu sync.Mutex
+
 			var wg sync.WaitGroup
 			tasksChan := make(chan int, int(agentConfig.RateLimit))
+
 			for i := 0; i < int(agentConfig.RateLimit); i++ {
 				wg.Add(1)
-				mu.Lock()
 				go worker(ctx, tasksChan, &wg, metricsCollector)
-				mu.Unlock()
 			}
 
 			go func() {
 				for {
-					mu.Lock()
 					metricsCollector.CollectMetrics(ctx)
-					time.Sleep(agentConfig.PollInterval)
 					tasksChan <- 1
-					mu.Unlock()
+					time.Sleep(agentConfig.PollInterval)
 				}
 			}()
 			go func() {
 				for {
-					mu.Lock()
 					metricsCollector.CollectUtilizationMetric(ctx)
-					time.Sleep(agentConfig.PollInterval)
 					tasksChan <- 1
-					mu.Unlock()
+					time.Sleep(agentConfig.PollInterval)
 				}
 			}()
 			wg.Wait()

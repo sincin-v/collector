@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	// "github.com/golang/mock/gomock"
 	"github.com/sincin-v/collector/internal/agent/clients/rest"
 	"github.com/sincin-v/collector/internal/agent/config"
 	"github.com/sincin-v/collector/internal/service"
@@ -35,8 +36,9 @@ func TestCollector_CollectMetrics(t *testing.T) {
 			hs := rest.New("localhost:8888", []time.Duration{1 * time.Second, 3 * time.Second, 5 * time.Second}, "secret_key")
 
 			c := Collector{
-				service:    s,
-				httpClient: hs,
+				service:        s,
+				httpClient:     hs,
+				memStatsMetric: make(map[string]float64),
 			}
 			c.CollectMetrics(ctx)
 

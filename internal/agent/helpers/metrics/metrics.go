@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"runtime"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/shirou/gopsutil/v4/cpu"
@@ -23,6 +24,7 @@ import (
 )
 
 var PollCountValue int = 0
+var mu sync.Mutex
 
 type MemMetrics struct {
 }
@@ -67,6 +69,7 @@ func (c Collector) StartSendMetrics(ctx context.Context, reportInterval time.Dur
 func (c *Collector) GetMetricsFromMemStats() {
 	var metrics runtime.MemStats
 	runtime.ReadMemStats(&metrics)
+	mu.Lock()
 	c.memStatsMetric["Alloc"] = float64(metrics.Alloc)
 	c.memStatsMetric["TotalAlloc"] = float64(metrics.TotalAlloc)
 	c.memStatsMetric["Sys"] = float64(metrics.Sys)
@@ -94,6 +97,7 @@ func (c *Collector) GetMetricsFromMemStats() {
 	c.memStatsMetric["NumGC"] = float64(metrics.NumGC)
 	c.memStatsMetric["NumForcedGC"] = float64(metrics.NumForcedGC)
 	c.memStatsMetric["GCCPUFraction"] = float64(metrics.GCCPUFraction)
+	mu.Unlock()
 }
 
 func (c *Collector) GetUtilizationMetrics() {
@@ -102,6 +106,7 @@ func (c *Collector) GetUtilizationMetrics() {
 		logger.Log.Error("Could not get memData")
 		return
 	}
+	mu.Lock()
 	c.memStatsMetric["TotalMemory"] = float64(memData.Total)
 	c.memStatsMetric["FreeMemory"] = float64(memData.Free)
 
@@ -115,6 +120,7 @@ func (c *Collector) GetUtilizationMetrics() {
 		cpuUtilizationMetric := "CPUutilization" + strconv.Itoa(coreID+1)
 		c.memStatsMetric[cpuUtilizationMetric] = corePercent
 	}
+	mu.Unlock()
 }
 
 func (c Collector) CollectMetrics(ctx context.Context) {
@@ -122,6 +128,7 @@ func (c Collector) CollectMetrics(ctx context.Context) {
 	log.Printf("Start collect metrics")
 	c.GetMetricsFromMemStats()
 	var err error
+	mu.Lock()
 	for metricName := range c.memStatsMetric {
 		metricValue := c.memStatsMetric[metricName]
 		log.Printf("Filed %s, value %v", metricName, metricValue)
@@ -129,6 +136,7 @@ func (c Collector) CollectMetrics(ctx context.Context) {
 			err = errors.Join(err, fmt.Errorf("update metric %s error: %w", metricName, errLoopMetric))
 		}
 	}
+	mu.Unlock()
 
 	if errCounterMetric := c.service.UpdateCounterMetric(ctx, "PollCount", 1); errCounterMetric != nil {
 		err = errors.Join(err, fmt.Errorf("update metric PollCount error: %w", errCounterMetric))
@@ -145,6 +153,7 @@ func (c Collector) CollectMetrics(ctx context.Context) {
 func (c Collector) CollectUtilizationMetric(ctx context.Context) {
 	logger.Log.Info("Start collect utilization metrics")
 	c.GetUtilizationMetrics()
+	mu.Lock()
 	for metricName := range c.memStatsMetric {
 		metricValue := c.memStatsMetric[metricName]
 		logger.Log.Debug("Filed %s, value %v", metricName, metricValue)
@@ -153,10 +162,12 @@ func (c Collector) CollectUtilizationMetric(ctx context.Context) {
 			continue
 		}
 	}
+	mu.Unlock()
 }
 
 func (c Collector) SendMetricsJSON(ctx context.Context) {
 	log.Printf("Start send metrics")
+	mu.Lock()
 	counterMetrics, gaugeMetrics := c.service.GetAllMetrics(ctx)
 	var methodURL = "/updates/"
 	var metricsArr []models.Metrics
@@ -181,8 +192,8 @@ func (c Collector) SendMetricsJSON(ctx context.Context) {
 		}
 		metricsArr = append(metricsArr, metricObj)
 	}
-
-	sendObj := metricsArr // models.MetricsArray{Metrics: metricsArr}
+	mu.Unlock()
+	sendObj := metricsArr
 
 	var buf bytes.Buffer
 	encoder := json.NewEncoder(&buf)
@@ -212,6 +223,7 @@ func (c Collector) SendMetricsJSON(ctx context.Context) {
 
 func (c Collector) SendMetrics(ctx context.Context) {
 	log.Printf("Send metric")
+	mu.Lock()
 	counterMetrics, gaugeMetrics := c.service.GetAllMetrics(ctx)
 	var methodURL = "/update/"
 
@@ -283,6 +295,7 @@ func (c Collector) SendMetrics(ctx context.Context) {
 			}
 		}()
 	}
+	mu.Unlock()
 	log.Printf("Finish send metrics")
 
 }
