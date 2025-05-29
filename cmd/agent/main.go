@@ -18,7 +18,6 @@ func worker(ctx context.Context, tasksChan chan int, wg *sync.WaitGroup, mc metr
 	for task := range tasksChan {
 		logger.Log.Info("Send metrics from task %d", task)
 		mc.SendMetricsJSON(ctx)
-		<-tasksChan
 	}
 }
 
@@ -53,29 +52,26 @@ func main() {
 		}
 	} else {
 		for {
-
-			var wg sync.WaitGroup
 			tasksChan := make(chan int, int(agentConfig.RateLimit))
+			var wg sync.WaitGroup
+			wg.Add(2)
 
 			for i := 0; i < int(agentConfig.RateLimit); i++ {
-				wg.Add(1)
+
 				go worker(ctx, tasksChan, &wg, metricsCollector)
 			}
 
 			go func() {
+				defer wg.Done()
 				for {
 					metricsCollector.CollectMetrics(ctx)
-					tasksChan <- 1
-					time.Sleep(agentConfig.PollInterval)
-				}
-			}()
-			go func() {
-				for {
 					metricsCollector.CollectUtilizationMetric(ctx)
 					tasksChan <- 1
+
 					time.Sleep(agentConfig.PollInterval)
 				}
 			}()
+
 			wg.Wait()
 		}
 	}

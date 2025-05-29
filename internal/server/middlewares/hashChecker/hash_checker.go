@@ -30,7 +30,7 @@ func CheckHashRequest(cfg config.Config) func(h http.Handler) http.Handler {
 				hmac := hmac.New(sha256.New, []byte(cfg.SecretKey))
 				hmac.Write(receivedBody)
 				hashSum := hmac.Sum(nil)
-				resultHash := b64.StdEncoding.EncodeToString([]byte(hashSum))
+				resultHash := b64.StdEncoding.EncodeToString(hashSum)
 				if requestHash != resultHash {
 					logger.Log.Error("Invalid receive hash!")
 					w.WriteHeader(http.StatusBadRequest)
