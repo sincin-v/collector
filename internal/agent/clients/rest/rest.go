@@ -2,6 +2,9 @@ package rest
 
 import (
 	"bytes"
+	"crypto/hmac"
+	"crypto/sha256"
+	b64 "encoding/base64"
 	"errors"
 	"fmt"
 	"log"
@@ -13,12 +16,14 @@ import (
 type HTTPClient struct {
 	baseURL        string
 	retryIntervals []time.Duration
+	secretKey      string
 }
 
-func New(baseURL string, retryIntervals []time.Duration) HTTPClient {
+func New(baseURL string, retryIntervals []time.Duration, secretKey string) HTTPClient {
 	return HTTPClient{
 		baseURL:        baseURL,
 		retryIntervals: retryIntervals,
+		secretKey:      secretKey,
 	}
 }
 
@@ -33,6 +38,13 @@ func (h HTTPClient) SendPostRequest(url string, body bytes.Buffer) (*http.Respon
 	request.Header.Set("Content-Encoding", "gzip")
 	request.Header.Set("Accept-Encoding", "gzip")
 	request.Header.Set("Content-Type", "application/json")
+	if h.secretKey != "" {
+		hmac := hmac.New(sha256.New, []byte(h.secretKey))
+		hmac.Write(body.Bytes())
+		hashSum := hmac.Sum(nil)
+		resultHash := b64.StdEncoding.EncodeToString([]byte(hashSum))
+		request.Header.Set("HashSHA256", resultHash)
+	}
 
 	var resp *http.Response
 	var err error

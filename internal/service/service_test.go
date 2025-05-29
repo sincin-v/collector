@@ -1,8 +1,8 @@
 package service
 
 import (
-	"testing"
 	"context"
+	"testing"
 
 	"github.com/sincin-v/collector/internal/server/config"
 	"github.com/sincin-v/collector/internal/storage"

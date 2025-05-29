@@ -25,6 +25,7 @@ type Config struct {
 	MigrationPath   string `env:"MIGRATION_PATH" envDefault:"./internal/database/migrations"`
 
 	RetryIntervals []time.Duration `env:"RETRY_INTERVALS" envSeparator:"," envDefault:"1s,3s,5s"`
+	SecretKey      string          `env:"KEY"`
 }
 
 func GetServerConfig() (*Config, error) {
@@ -36,6 +37,8 @@ func GetServerConfig() (*Config, error) {
 	flag.BoolVar(&cfg.Restore, "r", true, "Flag of restore collected metrics data")
 	flag.StringVar(&cfg.DBDns, "d", "", "DNS fo connect to DB")
 	flag.StringVar(&cfg.MigrationPath, "p", "./internal/database/migrations", "path to migrations files")
+	flag.StringVar(&cfg.SecretKey, "k", "", "secret key")
+
 	flag.Parse()
 	var err = env.Parse(cfg)
 	if err != nil {

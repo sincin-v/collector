@@ -54,9 +54,11 @@ iter12: iter11
 iter13: iter12
 	SERVER_PORT=8989 ADDRESS="localhost:8989" metricstest -test.v -source-path=. -server-port=8989 -agent-binary-path=cmd/agent/agent   -binary-path=cmd/server/server -database-dsn='postgres://db_user:N6KAKgEDa27aot@0.0.0.0:5432/praktikum?sslmode=disable' -file-storage-path=/tmp/metric_storage_file.json -test.run=TestIteration13
 
-iter14: iter13
-	SERVER_PORT=8989 ADDRESS="localhost:8989" metricstest -test.v -source-path=. -server-port=8989 -agent-binary-path=cmd/agent/agent   -binary-path=cmd/server/server -database-dsn='postgres://db_user:N6KAKgEDa27aot@0.0.0.0:5432/praktikum?sslmode=disable' -file-storage-path=/tmp/metric_storage_file.json -key=/tmp/tmp_file -test.run=TestIteration14
+sprint3: sprint1 sprint2 iter10 iter11 iter12 iter13
 
-sprint3: sprint1 sprint2 iter10 iter11 iter12 iter13 iter14
+
+iter14: #linter tests
+	SERVER_PORT=8989 ADDRESS="localhost:8989" metricstest -test.v -source-path=. -server-port=8989 -agent-binary-path=cmd/agent/agent   -binary-path=cmd/server/server -database-dsn='postgres://db_user:N6KAKgEDa27aot@0.0.0.0:5432/praktikum?sslmode=disable' -file-storage-path=/tmp/metric_storage_file.json -key=secretkey -test.run=TestIteration14
+
 
 ci: build linter

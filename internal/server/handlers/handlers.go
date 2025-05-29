@@ -24,12 +24,12 @@ type MetricsService interface {
 }
 
 type Handler struct {
-	service  MetricsService
+	service MetricsService
 }
 
 func New(s MetricsService) (*Handler, error) {
 	return &Handler{
-		service:  s,
+		service: s,
 	}, nil
 }
 

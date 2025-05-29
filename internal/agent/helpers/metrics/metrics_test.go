@@ -1,13 +1,14 @@
 package metrics
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
-	"context"
 	"testing"
 	"time"
 
+	// "github.com/golang/mock/gomock"
 	"github.com/sincin-v/collector/internal/agent/clients/rest"
 	"github.com/sincin-v/collector/internal/agent/config"
 	"github.com/sincin-v/collector/internal/service"
@@ -32,11 +33,12 @@ func TestCollector_CollectMetrics(t *testing.T) {
 			st := storage.NewMemStorage()
 			s := service.New(&st)
 
-			hs := rest.New("localhost:8888", []time.Duration{1 * time.Second, 3 * time.Second, 5 * time.Second})
+			hs := rest.New("localhost:8888", []time.Duration{1 * time.Second, 3 * time.Second, 5 * time.Second}, "secret_key")
 
 			c := Collector{
-				service:    s,
-				httpClient: hs,
+				service:        s,
+				httpClient:     hs,
+				memStatsMetric: make(map[string]float64),
 			}
 			c.CollectMetrics(ctx)
 
@@ -88,7 +90,7 @@ func TestCollector_SendMetrics(t *testing.T) {
 			_ = st.UpdateGaugeMetric(ctx, tt.fields.gaugeMetricName, tt.fields.gaugeMetricValue)
 			s := service.New(&st)
 
-			hs := rest.New(ts.URL, []time.Duration{1 * time.Second, 3 * time.Second, 5 * time.Second})
+			hs := rest.New(ts.URL, []time.Duration{1 * time.Second, 3 * time.Second, 5 * time.Second}, "secret_key")
 
 			c := Collector{
 				service:    s,
